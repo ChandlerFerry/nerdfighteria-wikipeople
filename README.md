@@ -17,3 +17,20 @@
 [vlogbrothers Video](https://www.youtube.com/watch?v=6I9eWxP-hQE)
 
 
+## Usage
+1. Download https://dumps.wikimedia.org/wikidatawiki/entities/latest-all.json.gz (~12 hour download)
+2. Place `latest-all.json.gz` in this repository's root next to the `src` folder
+3. Run `pnpm i` -> `pnpm build` -> `pnpm start` -> `pnpm merge`
+
+
+## Data Insight
+```
+Q5:        { category: "humans",     type: null },
+Q95074:    { category: "fictional",  type: "fictional character" },
+Q15632617: { category: "fictional",  type: "fictional human" },
+Q21070568: { category: "historical", type: null },
+```
+- Included: `Hank Green`
+- Included: `Miles Edward O'Brien (Star Trek)`
+- Included: `Confucius`
+- Not Included: `John Jacob Jingleheimer Schmidt`
