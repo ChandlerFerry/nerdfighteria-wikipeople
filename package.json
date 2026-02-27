@@ -1,19 +1,20 @@
 {
   "name": "famous-people",
   "version": "1.0.0",
-  "description": "",
   "type": "module",
+  "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
+    "smoke": "LIMIT=3 node dist/index.js all",
+    "merge": "node dist/index.js merge",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix"
   },
-  "keywords": [],
-  "author": "",
   "license": "ISC",
   "packageManager": "pnpm@10.12.1",
   "dependencies": {
+    "ky": "^1.14.3",
     "wikibase-sdk": "^11.2.7"
   },
   "devDependencies": {

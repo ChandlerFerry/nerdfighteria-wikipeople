@@ -1,0 +1,17 @@
+{
+  "humans": {
+    "offset": 9,
+    "done": false,
+    "total": 9
+  },
+  "fictional": {
+    "offset": 0,
+    "done": false,
+    "total": 0
+  },
+  "historical": {
+    "offset": 0,
+    "done": false,
+    "total": 0
+  }
+}
