@@ -1,7 +1,6 @@
 dist
 node_modules
 *.json.gz
-data/fictional.ndjson
-data/historical.ndjson
-data/humans.ndjson
-data/*.bak*
+data/*
+data/*
+!data/.gitkeep
