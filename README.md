@@ -1,4 +1,4 @@
-# famous-people
+# nerdfighteria-wikipeople
 
 ## Goals of this project
 1. Fetch all "People"
