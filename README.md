@@ -27,7 +27,7 @@
 
 ### 2. Extract pageview data
 Pageview counts come from Wikipedia's [monthly complete pageview dumps](https://dumps.wikimedia.org/other/pageview_complete/monthly/) (`pageviews-YYYYMM-user.bz2` files, ~5.5GB each).
-1. `pnpm script:pageviews`
+1. `pnpm script:pageviews` (takes ~30 hours? guessing, I started it at 12:40 PM on Sunday)
     - downloads all monthly dumps, processes them, writes `data/pageviews.ndjson`
 
 ### 3. Import into database
