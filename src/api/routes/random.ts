@@ -6,6 +6,10 @@ const randomRoute: FastifyPluginAsyncZod = async (fastify) => {
     "/random",
     {
       schema: {
+        tags: ["Browse"],
+        summary: "Random people",
+        description:
+          "Returns a random sample from each category. Fast - uses a pre-built random index rather than a full table scan.",
         querystring: z.object({
           n: z.coerce.number().int().min(1).max(500).default(50),
         }),

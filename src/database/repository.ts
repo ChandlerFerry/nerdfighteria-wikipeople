@@ -108,7 +108,6 @@ export function autocomplete(q: string, limit: number): EntityRow[] {
   }
 }
 
-// Returns undefined when the query sanitizes to nothing — callers should respond with 400.
 export function search(parameters: SearchParameters): SearchResponse | undefined {
   const ftsQuery = buildFtsQuery(parameters.q);
   if (!ftsQuery) return undefined;

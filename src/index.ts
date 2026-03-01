@@ -3,7 +3,9 @@
 import Fastify, { type FastifyInstance } from "fastify";
 import cors from "@fastify/cors";
 import rateLimit from "@fastify/rate-limit";
-import { serializerCompiler, validatorCompiler } from "fastify-type-provider-zod";
+import swagger from "@fastify/swagger";
+import swaggerUi from "@fastify/swagger-ui";
+import { jsonSchemaTransform, serializerCompiler, validatorCompiler } from "fastify-type-provider-zod";
 import { getRandom, autocomplete, search, close } from "./database/repository.js";
 import healthRoute from "./api/routes/health.js";
 import randomRoute from "./api/routes/random.js";
@@ -25,6 +27,25 @@ export async function createServer(): Promise<FastifyInstance> {
 
   fastify.setValidatorCompiler(validatorCompiler);
   fastify.setSerializerCompiler(serializerCompiler);
+
+  await fastify.register(swagger, {
+    openapi: {
+      info: {
+        title: "Famous People API",
+        description:
+          "Search, autocomplete, and browse 11.6 million people from Wikidata - real humans, historical figures, and fictional characters.\n\n**Rate limiting:** 100 requests / minute per IP on all endpoints except `/health`.",
+        version: "1.0.0",
+      },
+      tags: [
+        { name: "Search", description: "Find people by name" },
+        { name: "Browse", description: "Explore the dataset randomly" },
+        { name: "Meta", description: "Server status" },
+      ],
+    },
+    transform: jsonSchemaTransform,
+  });
+
+  await fastify.register(swaggerUi, { routePrefix: "/documentation" });
 
   fastify.decorate("repo", { getRandom, autocomplete, search });
   fastify.addHook("onClose", async () => close());
