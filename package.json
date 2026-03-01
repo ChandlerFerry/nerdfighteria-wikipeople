@@ -6,7 +6,8 @@
   "scripts": {
     "build": "tsc",
     "script:extract": "tsx scripts/extract.ts latest-all.json.gz",
-    "script:import": "tsx scripts/extract.ts import",
+    "script:pageviews": "tsx scripts/pageviews.ts",
+    "script:import": "tsx scripts/import.ts",
     "serve": "node dist/index.js",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix"
@@ -26,6 +27,7 @@
     "typescript-eslint": "^8.56.1"
   },
   "dependencies": {
+    "@fastify/cors": "^11.2.0",
     "@fastify/rate-limit": "^10.3.0",
     "fastify": "^5.7.4",
     "fastify-type-provider-zod": "^6.1.0",
