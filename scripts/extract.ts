@@ -3,6 +3,7 @@
 import { createReadStream, createWriteStream, mkdirSync } from "node:fs";
 import { createGunzip } from "node:zlib";
 import { createInterface } from "node:readline";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { importData } from "../src/lib/db.ts";
 
