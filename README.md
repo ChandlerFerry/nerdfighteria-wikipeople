@@ -17,7 +17,7 @@
 [vlogbrothers Video](https://www.youtube.com/watch?v=6I9eWxP-hQE)
 
 
-## Usage
+## Updating Data
 1. Download https://dumps.wikimedia.org/wikidatawiki/entities/latest-all.json.gz (~12-16 hour download, triple that if you forget and turn off your computer while you sleep)
 2. Place `latest-all.json.gz` in this repository's root next to the `src` folder
 3. Run `pnpm i` -> `pnpm build` -> `pnpm start` -> `pnpm merge`
