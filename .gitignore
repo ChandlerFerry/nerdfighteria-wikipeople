@@ -4,3 +4,4 @@ node_modules
 data/fictional.ndjson
 data/historical.ndjson
 data/humans.ndjson
+data/*.bak*
