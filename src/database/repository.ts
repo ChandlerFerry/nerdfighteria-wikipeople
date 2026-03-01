@@ -16,6 +16,7 @@ function toEntityRow(row: Record<string, SQLOutputValue>): EntityRow {
     type: row.type as string | null,
     category: row.category as string,
     sitelink_count: row.sitelink_count as number,
+    pageviews: row.pageviews as number,
     wikipedia: row.wikipedia as string | null,
     wikidata: row.wikidata as string,
   };
@@ -33,21 +34,21 @@ const database = openDatabase();
 
 const stmts = {
   randomByCategory: database.prepare(`
-    SELECT qid, label, description, type, category, sitelink_count, wikipedia, wikidata
+    SELECT qid, label, description, type, category, sitelink_count, pageviews, wikipedia, wikidata
     FROM entities
     WHERE category = ? AND rand >= ?
     ORDER BY rand
     LIMIT ?
   `),
   randomByCategoryFrom0: database.prepare(`
-    SELECT qid, label, description, type, category, sitelink_count, wikipedia, wikidata
+    SELECT qid, label, description, type, category, sitelink_count, pageviews, wikipedia, wikidata
     FROM entities
     WHERE category = ? AND rand >= 0
     ORDER BY rand
     LIMIT ?
   `),
   autocomplete: database.prepare(`
-    SELECT e.qid, e.label, e.description, e.type, e.category, e.sitelink_count, e.wikipedia, e.wikidata
+    SELECT e.qid, e.label, e.description, e.type, e.category, e.sitelink_count, e.pageviews, e.wikipedia, e.wikidata
     FROM entities_fts
     JOIN entities e ON entities_fts.rowid = e.rowid
     WHERE entities_fts MATCH ?
@@ -55,7 +56,7 @@ const stmts = {
     LIMIT ?
   `),
   search: database.prepare(`
-    SELECT e.qid, e.label, e.description, e.type, e.category, e.sitelink_count, e.wikipedia, e.wikidata
+    SELECT e.qid, e.label, e.description, e.type, e.category, e.sitelink_count, e.pageviews, e.wikipedia, e.wikidata
     FROM entities_fts
     JOIN entities e ON entities_fts.rowid = e.rowid
     WHERE entities_fts MATCH ?
@@ -63,7 +64,7 @@ const stmts = {
     LIMIT ? OFFSET ?
   `),
   searchWithCategory: database.prepare(`
-    SELECT e.qid, e.label, e.description, e.type, e.category, e.sitelink_count, e.wikipedia, e.wikidata
+    SELECT e.qid, e.label, e.description, e.type, e.category, e.sitelink_count, e.pageviews, e.wikipedia, e.wikidata
     FROM entities_fts
     JOIN entities e ON entities_fts.rowid = e.rowid
     WHERE entities_fts MATCH ? AND e.category = ?

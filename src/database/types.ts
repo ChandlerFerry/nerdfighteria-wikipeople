@@ -8,6 +8,7 @@ export interface EntityRow {
   type: string | null;
   category: string;
   sitelink_count: number;
+  pageviews: number;
   wikipedia: string | null;
   wikidata: string;
 }

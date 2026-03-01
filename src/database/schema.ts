@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS entities (
   type           TEXT,
   category       TEXT    NOT NULL,
   sitelink_count INTEGER NOT NULL DEFAULT 0,
+  pageviews      INTEGER NOT NULL DEFAULT 0,
   wikipedia      TEXT,
   wikidata       TEXT    NOT NULL,
   rand           REAL    NOT NULL

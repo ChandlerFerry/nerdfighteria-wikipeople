@@ -17,7 +17,16 @@ interface NdjsonRecord {
   wikidata: string;
 }
 
-export async function importData(): Promise<void> {
+function extractTitle(wikipedia: string): string | undefined {
+  try {
+    const url = new URL(wikipedia);
+    return decodeURIComponent(url.pathname.replace("/wiki/", "")).replaceAll(" ", "_");
+  } catch {
+    return undefined;
+  }
+}
+
+export async function importData(pageviews?: Map<string, number>): Promise<void> {
   const database = new DatabaseSync(DB_PATH);
 
   database.exec(`
@@ -30,8 +39,8 @@ export async function importData(): Promise<void> {
 
   const insert = database.prepare(`
     INSERT OR IGNORE INTO entities
-      (qid, label, description, type, category, sitelink_count, wikipedia, wikidata, rand)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      (qid, label, description, type, category, sitelink_count, pageviews, wikipedia, wikidata, rand)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
   const sources: Array<{ file: string; category: Category }> = [
@@ -55,8 +64,9 @@ export async function importData(): Promise<void> {
     const flush = () => {
       database.exec("BEGIN");
       for (const r of batch) {
+        const views = r.wikipedia && pageviews ? (pageviews.get(extractTitle(r.wikipedia) ?? "") ?? 0) : 0;
         // eslint-disable-next-line unicorn/no-null -- SQLite requires null for NULL values
-        insert.run(r.qid, r.label, r.description ?? null, r.type ?? null, category, r.sitelinkCount, r.wikipedia ?? null, r.wikidata, Math.random());
+        insert.run(r.qid, r.label, r.description ?? null, r.type ?? null, category, r.sitelinkCount, views, r.wikipedia ?? null, r.wikidata, Math.random());
       }
       database.exec("COMMIT");
       fileImported += batch.length;
