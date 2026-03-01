@@ -3,8 +3,7 @@
 import Fastify, { type FastifyInstance } from "fastify";
 import rateLimit from "@fastify/rate-limit";
 import { serializerCompiler, validatorCompiler } from "fastify-type-provider-zod";
-import { openDatabase } from "./database/connection.js";
-import { EntityRepository } from "./database/repository.js";
+import { getRandom, autocomplete, search, close } from "./database/repository.js";
 import healthRoute from "./api/routes/health.js";
 import randomRoute from "./api/routes/random.js";
 import autocompleteRoute from "./api/routes/autocomplete.js";
@@ -12,7 +11,11 @@ import searchRoute from "./api/routes/search.js";
 
 declare module "fastify" {
   interface FastifyInstance {
-    repo: EntityRepository;
+    repo: {
+      getRandom: typeof getRandom;
+      autocomplete: typeof autocomplete;
+      search: typeof search;
+    };
   }
 }
 
@@ -22,9 +25,8 @@ export async function createServer(): Promise<FastifyInstance> {
   fastify.setValidatorCompiler(validatorCompiler);
   fastify.setSerializerCompiler(serializerCompiler);
 
-  const database = openDatabase();
-  fastify.decorate("repo", new EntityRepository(database));
-  fastify.addHook("onClose", async () => database.close());
+  fastify.decorate("repo", { getRandom, autocomplete, search });
+  fastify.addHook("onClose", async () => close());
 
   await fastify.register(healthRoute);
 
