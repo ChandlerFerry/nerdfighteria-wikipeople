@@ -5,7 +5,7 @@ import { createGunzip } from "node:zlib";
 import { createInterface } from "node:readline";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { importData } from "../src/lib/db.ts";
+import { importData } from "../src/database/import.js";
 
 const DATA_DIR = "data";
 
