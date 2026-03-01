@@ -1,0 +1,12 @@
+node_modules
+dist
+src
+data/*.ndjson
+data/*.gz
+*.gz
+.git
+.gitignore
+.eslintrc*
+eslint.config*
+tsconfig.json
+*.md
