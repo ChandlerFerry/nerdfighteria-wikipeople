@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import Fastify, { type FastifyInstance } from "fastify";
+import cors from "@fastify/cors";
 import rateLimit from "@fastify/rate-limit";
 import { serializerCompiler, validatorCompiler } from "fastify-type-provider-zod";
 import { getRandom, autocomplete, search, close } from "./database/repository.js";
@@ -27,6 +28,8 @@ export async function createServer(): Promise<FastifyInstance> {
 
   fastify.decorate("repo", { getRandom, autocomplete, search });
   fastify.addHook("onClose", async () => close());
+
+  await fastify.register(cors, { origin: true, methods: ["GET"] });
 
   await fastify.register(healthRoute);
 
