@@ -12,7 +12,7 @@ export interface EntityRow {
   wikidata: string;
 }
 
-export interface SearchParams {
+export interface SearchParameters {
   q: string;
   category?: Category;
   limit: number;

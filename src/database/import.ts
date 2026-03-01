@@ -18,17 +18,17 @@ interface NdjsonRecord {
 }
 
 export async function importData(): Promise<void> {
-  const db = new DatabaseSync(DB_PATH);
+  const database = new DatabaseSync(DB_PATH);
 
-  db.exec(`
+  database.exec(`
     PRAGMA journal_mode=OFF;
     PRAGMA synchronous=OFF;
     PRAGMA cache_size=-131072;
     PRAGMA temp_store=MEMORY;
   `);
-  db.exec(SCHEMA);
+  database.exec(SCHEMA);
 
-  const insert = db.prepare(`
+  const insert = database.prepare(`
     INSERT OR IGNORE INTO entities
       (qid, label, description, type, category, sitelink_count, wikipedia, wikidata, rand)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -53,11 +53,11 @@ export async function importData(): Promise<void> {
     });
 
     const flush = () => {
-      db.exec("BEGIN");
+      database.exec("BEGIN");
       for (const r of batch) {
         insert.run(r.qid, r.label, r.description ?? null, r.type ?? null, category, r.sitelinkCount, r.wikipedia ?? null, r.wikidata, Math.random());
       }
-      db.exec("COMMIT");
+      database.exec("COMMIT");
       fileImported += batch.length;
       totalImported += batch.length;
       batch = [];
@@ -77,9 +77,9 @@ export async function importData(): Promise<void> {
   }
 
   console.log("Running ANALYZE...");
-  db.exec("PRAGMA journal_mode=WAL;");
-  db.exec("ANALYZE;");
-  db.close();
+  database.exec("PRAGMA journal_mode=WAL;");
+  database.exec("ANALYZE;");
+  database.close();
 
   console.log(`Import complete: ${totalImported.toLocaleString()} total records`);
 }

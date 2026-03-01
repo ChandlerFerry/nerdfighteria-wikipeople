@@ -1,5 +1,5 @@
 import { DatabaseSync, StatementSync, type SQLOutputValue } from "node:sqlite";
-import type { Category, EntityRow, SearchParams, SearchResponse } from "./types.js";
+import type { Category, EntityRow, SearchParams as SearchParameters, SearchResponse } from "./types.js";
 
 interface Statements {
   randomByCategory: StatementSync;
@@ -30,18 +30,18 @@ function toEntityRow(row: Record<string, SQLOutputValue>): EntityRow {
   };
 }
 
-function shuffle<T>(arr: T[]): T[] {
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
+function shuffle<T>(array: T[]): T[] {
+  for (let index = array.length - 1; index > 0; index--) {
+    const index_ = Math.floor(Math.random() * (index + 1));
+    [array[index], array[index_]] = [array[index_], array[index]];
   }
-  return arr;
+  return array;
 }
 
 export class EntityRepository {
   private readonly stmts: Statements;
 
-  constructor(private readonly db: DatabaseSync) {
+  constructor(private readonly database: DatabaseSync) {
     this.stmts = this.prepareStatements();
   }
 
@@ -124,12 +124,12 @@ export class EntityRepository {
   }
 
   // Returns null when the query sanitizes to nothing — callers should respond with 400.
-  search(params: SearchParams): SearchResponse | null {
-    const ftsQuery = buildFtsQuery(params.q);
+  search(parameters: SearchParameters): SearchResponse | null {
+    const ftsQuery = buildFtsQuery(parameters.q);
     if (!ftsQuery) return null;
 
     try {
-      const { limit, offset, category } = params;
+      const { limit, offset, category } = parameters;
 
       const results = category
         ? this.stmts.searchWithCategory.all(ftsQuery, category, limit, offset).map(toEntityRow)

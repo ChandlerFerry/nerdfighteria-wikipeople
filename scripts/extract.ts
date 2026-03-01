@@ -127,11 +127,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
 
   let action: Promise<void>;
 
-  if (cmd === "import") {
-    action = importData();
-  } else {
-    action = processDump(cmd);
-  }
+  action = cmd === "import" ? importData() : processDump(cmd);
 
   action.catch((error) => {
     console.error("Fatal:", error);

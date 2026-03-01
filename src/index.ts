@@ -22,9 +22,9 @@ export async function createServer(): Promise<FastifyInstance> {
   fastify.setValidatorCompiler(validatorCompiler);
   fastify.setSerializerCompiler(serializerCompiler);
 
-  const db = openDatabase();
-  fastify.decorate("repo", new EntityRepository(db));
-  fastify.addHook("onClose", async () => db.close());
+  const database = openDatabase();
+  fastify.decorate("repo", new EntityRepository(database));
+  fastify.addHook("onClose", async () => database.close());
 
   await fastify.register(healthRoute);
 
