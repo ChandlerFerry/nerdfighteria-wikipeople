@@ -18,7 +18,7 @@
 
 
 ## Usage
-1. Download https://dumps.wikimedia.org/wikidatawiki/entities/latest-all.json.gz (~12 hour download)
+1. Download https://dumps.wikimedia.org/wikidatawiki/entities/latest-all.json.gz (~12-16 hour download, triple that if you forget and turn off your computer while you sleep)
 2. Place `latest-all.json.gz` in this repository's root next to the `src` folder
 3. Run `pnpm i` -> `pnpm build` -> `pnpm start` -> `pnpm merge`
 
@@ -30,7 +30,8 @@ Q95074:    { category: "fictional",  type: "fictional character" },
 Q15632617: { category: "fictional",  type: "fictional human" },
 Q21070568: { category: "historical", type: null },
 ```
-- Included: `Hank Green`
 - Included: `Miles Edward O'Brien (Star Trek)`
 - Included: `Confucius`
+- Included: `Chandler Bing`
+- Included: `Hank Green`
 - Not Included: `John Jacob Jingleheimer Schmidt`
