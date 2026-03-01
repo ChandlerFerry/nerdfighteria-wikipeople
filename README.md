@@ -23,15 +23,15 @@
 3. Run `pnpm i` -> `pnpm build` -> `pnpm start` -> `pnpm merge`
 
 
-## Data Insight
-```
-Q5:        { category: "humans",     type: null },
-Q95074:    { category: "fictional",  type: "fictional character" },
-Q15632617: { category: "fictional",  type: "fictional human" },
-Q21070568: { category: "historical", type: null },
-```
-- Included: `Miles Edward O'Brien (Star Trek)`
-- Included: `Confucius`
-- Included: `Chandler Bing`
-- Included: `Hank Green`
-- Not Included: `John Jacob Jingleheimer Schmidt`
+## Data Insight (Examples to come)
+
+| QID | Category | Type | Wikidata |
+|-----|----------|------|----------|
+| [Q5](https://www.wikidata.org/wiki/Q5) | humans | — | human |
+| [Q95074](https://www.wikidata.org/wiki/Q95074) | fictional | fictional character | fictional character |
+| [Q15632617](https://www.wikidata.org/wiki/Q15632617) | fictional | fictional human | fictional human |
+| [Q4271324](https://www.wikidata.org/wiki/Q4271324) | fictional | mythical character | mythical character |
+| [Q15773347](https://www.wikidata.org/wiki/Q15773347) | fictional | fictional organism | fictional organism |
+| [Q15773317](https://www.wikidata.org/wiki/Q15773317) | fictional | television character | television character |
+| [Q3658341](https://www.wikidata.org/wiki/Q3658341) | fictional | literary character | literary character |
+| [Q21070568](https://www.wikidata.org/wiki/Q21070568) | historical | — | human who may be fictional |

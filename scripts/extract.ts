@@ -13,6 +13,10 @@ const CLASSES: Record<string, { category: string; type: string | null }> = {
   Q5:        { category: "humans",     type: null },
   Q95074:    { category: "fictional",  type: "fictional character" },
   Q15632617: { category: "fictional",  type: "fictional human" },
+  Q4271324:  { category: "fictional",  type: "mythical character" },
+  Q15773347: { category: "fictional",  type: "fictional organism" },
+  Q15773317: { category: "fictional",  type: "television character" },
+  Q3658341:  { category: "fictional",  type: "literary character" },
   Q21070568: { category: "historical", type: null },
 };
 
