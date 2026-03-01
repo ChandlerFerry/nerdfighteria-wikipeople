@@ -1,7 +1,10 @@
+#!/usr/bin/env node
+
 import { createReadStream, createWriteStream, mkdirSync } from "node:fs";
 import { createGunzip } from "node:zlib";
 import { createInterface } from "node:readline";
-import { join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { importData } from "../src/lib/db.ts";
 
 const DATA_DIR = "data";
 
@@ -12,7 +15,7 @@ const CLASSES: Record<string, { category: string; type: string | null }> = {
   Q21070568: { category: "historical", type: null },
 };
 
-export interface Entity {
+interface Entity {
   type: string;
   id: string;
   labels?: { en?: { value: string } };
@@ -26,7 +29,7 @@ export interface Entity {
   sitelinks?: Record<string, { title: string }>;
 }
 
-export interface Result {
+interface Result {
   qid: string;
   label: string;
   description: string | null;
@@ -36,7 +39,7 @@ export interface Result {
   wikidata: string;
 }
 
-export function matchClass(entity: Entity): { category: string; type: string | null } | null {
+function matchClass(entity: Entity): { category: string; type: string | null } | null {
   for (const claim of entity.claims?.P31 ?? []) {
     if (claim.rank === "deprecated" || claim.mainsnak.snaktype !== "value") continue;
     const id = claim.mainsnak.datavalue?.value?.id;
@@ -45,7 +48,7 @@ export function matchClass(entity: Entity): { category: string; type: string | n
   return null;
 }
 
-export function toResult(entity: Entity, type: string | null): Result | null {
+function toResult(entity: Entity, type: string | null): Result | null {
   const label = entity.labels?.en?.value;
   if (!label) return null;
   const wikiTitle = entity.sitelinks?.enwiki?.title ?? null;
@@ -60,35 +63,7 @@ export function toResult(entity: Entity, type: string | null): Result | null {
   };
 }
 
-export async function merge() {
-  const sources = [
-    { file: join(DATA_DIR, "humans.ndjson"),     category: "human" },
-    { file: join(DATA_DIR, "fictional.ndjson"),  category: "fictional" },
-    { file: join(DATA_DIR, "historical.ndjson"), category: "historical" },
-  ];
-
-  const out = createWriteStream(join(DATA_DIR, "all.ndjson"));
-  const seen = new Set<string>();
-  let total = 0;
-  let dupes = 0;
-
-  for (const { file, category } of sources) {
-    const rl = createInterface({ input: createReadStream(file), crlfDelay: Number.POSITIVE_INFINITY });
-    for await (const line of rl) {
-      if (!line.trim()) continue;
-      const obj = JSON.parse(line) as { qid: string };
-      if (seen.has(obj.qid)) { dupes++; continue; }
-      seen.add(obj.qid);
-      out.write(JSON.stringify({ ...obj, category }) + "\n");
-      total++;
-    }
-  }
-
-  await new Promise<void>((resolve) => out.end(resolve));
-  console.log(`→ data/all.ndjson: ${total} unique, ${dupes} duplicates removed.`);
-}
-
-export async function processDump(dumpPath: string) {
+async function processDump(dumpPath: string) {
   mkdirSync(DATA_DIR, { recursive: true });
 
   const out = {
@@ -134,4 +109,27 @@ export async function processDump(dumpPath: string) {
 
   await Promise.all(Object.values(out).map((s) => new Promise<void>((resolve) => s.end(resolve))));
   console.log(`\nDone. ${processed.toLocaleString()} entities processed, ${matched.toLocaleString()} matched.`);
+}
+
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  const cmd = process.argv[2];
+
+  if (!cmd) {
+    console.error("Usage: node --experimental-transform-types scripts/extract.ts <path-to-dump.json.gz>");
+    console.error("       node --experimental-transform-types scripts/extract.ts import");
+    process.exit(1);
+  }
+
+  let action: Promise<void>;
+
+  if (cmd === "import") {
+    action = importData();
+  } else {
+    action = processDump(cmd);
+  }
+
+  action.catch((error) => {
+    console.error("Fatal:", error);
+    process.exit(1);
+  });
 }
