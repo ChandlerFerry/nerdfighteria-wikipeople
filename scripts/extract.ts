@@ -5,19 +5,35 @@ import { createGunzip } from "node:zlib";
 import { createInterface } from "node:readline";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { importData } from "../src/database/import.js";
 
 const DATA_DIR = "data";
 
 const CLASSES: Record<string, { category: string; type: string | undefined }> = {
-  Q5:        { category: "humans",     type: undefined },
-  Q95074:    { category: "fictional",  type: "fictional character" },
-  Q15632617: { category: "fictional",  type: "fictional human" },
-  Q4271324:  { category: "fictional",  type: "mythical character" },
-  Q15773347: { category: "fictional",  type: "fictional organism" },
-  Q15773317: { category: "fictional",  type: "television character" },
-  Q3658341:  { category: "fictional",  type: "literary character" },
-  Q21070568: { category: "historical", type: undefined },
+  Q5:         { category: "humans",     type: undefined },
+  Q95074:     { category: "fictional",  type: "fictional character" },
+  Q15632617:  { category: "fictional",  type: "fictional human" },
+  Q4271324:   { category: "fictional",  type: "mythical character" },
+  Q15773347:  { category: "fictional",  type: "film character" },
+  Q15773317:  { category: "fictional",  type: "television character" },
+  Q3658341:   { category: "fictional",  type: "literary character" },
+  Q50386450:  { category: "fictional",  type: "operatic character" },
+  Q1569167:   { category: "fictional",  type: "video game character" },
+  Q80447738:  { category: "fictional",  type: "anime character" },
+  Q1114461:   { category: "fictional",  type: "comics character" },
+  Q87576284:  { category: "fictional",  type: "manga character" },
+  Q63975020:  { category: "fictional",  type: "musical theatre character" },
+  Q15711870:  { category: "fictional",  type: "animated character" },
+  Q22988604:  { category: "fictional",  type: "mythological Greek character" },
+  Q3375722:   { category: "fictional",  type: "theatrical character" },
+  Q386208:    { category: "fictional",  type: "mascot character" },
+  Q20643955:  { category: "fictional",  type: "human biblical figure" },
+  Q28020127:  { category: "fictional",  type: "fictional humanoid" },
+  Q123126876: { category: "fictional",  type: "animated television character" },
+  Q17624054:  { category: "fictional",  type: "fictional deity" },
+  Q13002315:  { category: "fictional",  type: "legendary figure" },
+  Q108065012: { category: "fictional",  type: "radio character" },
+  Q25810847:  { category: "fictional",  type: "folklore character" },
+  Q21070568:  { category: "historical", type: undefined },
 };
 
 interface Entity {
@@ -117,17 +133,15 @@ async function processDump(dumpPath: string) {
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  const cmd = process.argv[2];
+  const dumpPath = process.argv[2];
 
-  if (!cmd) {
-    console.error("Usage: node --experimental-transform-types scripts/extract.ts <path-to-dump.json.gz>");
-    console.error("       node --experimental-transform-types scripts/extract.ts import");
+  if (!dumpPath) {
+    console.error("Usage: tsx scripts/extract.ts <path-to-dump.json.gz>");
     process.exit(1);
   }
 
   try {
-    // eslint-disable-next-line unicorn/prefer-top-level-await -- processDump is a reusable helper
-    await (cmd === "import" ? importData() : processDump(cmd));
+    await processDump(dumpPath);
   } catch (error) {
     console.error("Fatal:", error);
     process.exit(1);
