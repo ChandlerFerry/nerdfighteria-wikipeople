@@ -11,9 +11,9 @@ interface Statements {
   searchCountWithCategory: StatementSync;
 }
 
-function buildFtsQuery(raw: string): string | null {
+function buildFtsQuery(raw: string): string | undefined {
   const tokens = raw.split(/[^\p{L}\p{N}]+/u).filter((t) => t.length > 0);
-  if (tokens.length === 0) return null;
+  if (tokens.length === 0) return undefined;
   return tokens.map((t) => `${t}*`).join(" ");
 }
 
@@ -102,13 +102,13 @@ export class EntityRepository {
 
   getRandom(category: Category, n: number): EntityRow[] {
     const pivot = Math.random();
-    const first = this.stmts.randomByCategory.all(category, pivot, n).map(toEntityRow);
+    const first = this.stmts.randomByCategory.all(category, pivot, n).map((row) => toEntityRow(row));
 
     if (first.length >= n) return shuffle(first);
 
     const rest = this.stmts.randomByCategoryFrom0
       .all(category, n - first.length)
-      .map(toEntityRow);
+      .map((row) => toEntityRow(row));
 
     return shuffle([...first, ...rest]);
   }
@@ -117,23 +117,23 @@ export class EntityRepository {
     const ftsQuery = buildFtsQuery(q);
     if (!ftsQuery) return [];
     try {
-      return this.stmts.autocomplete.all(ftsQuery, limit).map(toEntityRow);
+      return this.stmts.autocomplete.all(ftsQuery, limit).map((row) => toEntityRow(row));
     } catch {
       return [];
     }
   }
 
-  // Returns null when the query sanitizes to nothing — callers should respond with 400.
-  search(parameters: SearchParameters): SearchResponse | null {
+  // Returns undefined when the query sanitizes to nothing — callers should respond with 400.
+  search(parameters: SearchParameters): SearchResponse | undefined {
     const ftsQuery = buildFtsQuery(parameters.q);
-    if (!ftsQuery) return null;
+    if (!ftsQuery) return undefined;
 
     try {
       const { limit, offset, category } = parameters;
 
       const results = category
-        ? this.stmts.searchWithCategory.all(ftsQuery, category, limit, offset).map(toEntityRow)
-        : this.stmts.search.all(ftsQuery, limit, offset).map(toEntityRow);
+        ? this.stmts.searchWithCategory.all(ftsQuery, category, limit, offset).map((row) => toEntityRow(row))
+        : this.stmts.search.all(ftsQuery, limit, offset).map((row) => toEntityRow(row));
 
       const countRow = category
         ? this.stmts.searchCountWithCategory.get(ftsQuery, category)
@@ -141,7 +141,7 @@ export class EntityRepository {
 
       return { results, total: (countRow?.total as number) ?? 0, limit, offset };
     } catch {
-      return null;
+      return undefined;
     }
   }
 

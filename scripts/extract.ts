@@ -3,21 +3,21 @@
 import { createReadStream, createWriteStream, mkdirSync } from "node:fs";
 import { createGunzip } from "node:zlib";
 import { createInterface } from "node:readline";
-import { join } from "node:path";
+import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { importData } from "../src/database/import.js";
 
 const DATA_DIR = "data";
 
-const CLASSES: Record<string, { category: string; type: string | null }> = {
-  Q5:        { category: "humans",     type: null },
+const CLASSES: Record<string, { category: string; type: string | undefined }> = {
+  Q5:        { category: "humans",     type: undefined },
   Q95074:    { category: "fictional",  type: "fictional character" },
   Q15632617: { category: "fictional",  type: "fictional human" },
   Q4271324:  { category: "fictional",  type: "mythical character" },
   Q15773347: { category: "fictional",  type: "fictional organism" },
   Q15773317: { category: "fictional",  type: "television character" },
   Q3658341:  { category: "fictional",  type: "literary character" },
-  Q21070568: { category: "historical", type: null },
+  Q21070568: { category: "historical", type: undefined },
 };
 
 interface Entity {
@@ -37,33 +37,33 @@ interface Entity {
 interface Result {
   qid: string;
   label: string;
-  description: string | null;
-  type: string | null;
+  description: string | undefined;
+  type: string | undefined;
   sitelinkCount: number;
-  wikipedia: string | null;
+  wikipedia: string | undefined;
   wikidata: string;
 }
 
-function matchClass(entity: Entity): { category: string; type: string | null } | null {
+function matchClass(entity: Entity): { category: string; type: string | undefined } | undefined {
   for (const claim of entity.claims?.P31 ?? []) {
     if (claim.rank === "deprecated" || claim.mainsnak.snaktype !== "value") continue;
     const id = claim.mainsnak.datavalue?.value?.id;
     if (id && id in CLASSES) return CLASSES[id];
   }
-  return null;
+  return undefined;
 }
 
-function toResult(entity: Entity, type: string | null): Result | null {
+function toResult(entity: Entity, type: string | undefined): Result | undefined {
   const label = entity.labels?.en?.value;
-  if (!label) return null;
-  const wikiTitle = entity.sitelinks?.enwiki?.title ?? null;
+  if (!label) return undefined;
+  const wikiTitle = entity.sitelinks?.enwiki?.title;
   return {
     qid: entity.id,
     label,
-    description: entity.descriptions?.en?.value ?? null,
+    description: entity.descriptions?.en?.value,
     type,
     sitelinkCount: Object.keys(entity.sitelinks ?? {}).length,
-    wikipedia: wikiTitle ? `https://en.wikipedia.org/wiki/${encodeURIComponent(wikiTitle)}` : null,
+    wikipedia: wikiTitle ? `https://en.wikipedia.org/wiki/${encodeURIComponent(wikiTitle)}` : undefined,
     wikidata: `https://www.wikidata.org/wiki/${entity.id}`,
   };
 }
@@ -72,9 +72,9 @@ async function processDump(dumpPath: string) {
   mkdirSync(DATA_DIR, { recursive: true });
 
   const out = {
-    humans:     createWriteStream(join(DATA_DIR, "humans.ndjson")),
-    fictional:  createWriteStream(join(DATA_DIR, "fictional.ndjson")),
-    historical: createWriteStream(join(DATA_DIR, "historical.ndjson")),
+    humans:     createWriteStream(path.join(DATA_DIR, "humans.ndjson")),
+    fictional:  createWriteStream(path.join(DATA_DIR, "fictional.ndjson")),
+    historical: createWriteStream(path.join(DATA_DIR, "historical.ndjson")),
   };
 
   const rl = createInterface({
@@ -125,12 +125,11 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     process.exit(1);
   }
 
-  let action: Promise<void>;
-
-  action = cmd === "import" ? importData() : processDump(cmd);
-
-  action.catch((error) => {
+  try {
+    // eslint-disable-next-line unicorn/prefer-top-level-await -- processDump is a reusable helper
+    await (cmd === "import" ? importData() : processDump(cmd));
+  } catch (error) {
     console.error("Fatal:", error);
     process.exit(1);
-  });
+  }
 }

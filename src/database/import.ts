@@ -55,6 +55,7 @@ export async function importData(): Promise<void> {
     const flush = () => {
       database.exec("BEGIN");
       for (const r of batch) {
+        // eslint-disable-next-line unicorn/no-null -- SQLite requires null for NULL values
         insert.run(r.qid, r.label, r.description ?? null, r.type ?? null, category, r.sitelinkCount, r.wikipedia ?? null, r.wikidata, Math.random());
       }
       database.exec("COMMIT");

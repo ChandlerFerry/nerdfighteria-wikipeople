@@ -43,7 +43,9 @@ async function startServer(): Promise<void> {
   await server.listen({ port: Number(process.env.PORT ?? 8080), host: "0.0.0.0" });
 }
 
-startServer().catch((error) => {
+try {
+  await startServer();
+} catch (error) {
   console.error("Fatal:", error);
   process.exit(1);
-});
+}
