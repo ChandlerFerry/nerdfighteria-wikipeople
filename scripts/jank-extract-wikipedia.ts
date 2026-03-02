@@ -45,6 +45,18 @@ const WORK_KEYWORDS = [
   'story',
 ];
 
+const NAME_PARTICLES = new Set([
+  'de', 'del', 'della', 'di', 'das', 'dos', 'do',
+  'von', 'van', 'den', 'der', 'het',
+  'la', 'le', 'les', 'el',
+  'du', 'des',
+  'al', 'bin', 'ibn', 'ben', 'bint', 'abu',
+  'y', 'e', 'i',
+  'a', 'o', 'na', 'ni', 'no',
+  'mac', 'mc',
+  'the', 'of', 'and',
+]);
+
 const PAGE_COL = { id: 0, ns: 1, title: 2, redirect: 3 } as const;
 const LT_COL = { id: 0, ns: 1, title: 2 } as const;
 const CL_COL = { from: 0, type: 4, targetId: 6 } as const;
@@ -299,6 +311,24 @@ function isFictionalCharCategory(title: string): boolean {
   return CHAR_BFS_KEYWORDS.some((kw) => lower.includes(kw));
 }
 
+function looksLikeCharacterName(title: string): boolean {
+  const words = title.split('_');
+  if (words.length < 2 || words.length > 4) return false;
+
+  let capitalizedCount = 0;
+  for (const word of words) {
+    if (/\d/.test(word)) return false;
+    if (word.length > 1 && word === word.toUpperCase()) return false;
+
+    if (NAME_PARTICLES.has(word.toLowerCase())) continue;
+
+    if (word[0] !== word[0].toUpperCase()) return false;
+    capitalizedCount++;
+  }
+
+  return capitalizedCount >= 2;
+}
+
 function bfsFictionalLtIds(
   rootLtId: number,
   subcatEdges: Map<number, Set<number>>,
@@ -455,6 +485,7 @@ async function writeOutput(
   const writtenQids = new Set<string>();
   let written = 0;
   let skipped = 0;
+  let nameFiltered = 0;
 
   function emit(title: string, isRedirect: boolean): void {
     if (
@@ -469,8 +500,13 @@ async function writeOutput(
       skipped++;
       return;
     }
+    if (isRedirect && !looksLikeCharacterName(title)) {
+      nameFiltered++;
+      return;
+    }
 
-    const qid = `enwiki:${title}`;
+    const utf8Title = Buffer.from(title, 'latin1').toString('utf8');
+    const qid = `enwiki:${utf8Title}`;
     if (writtenQids.has(qid)) {
       skipped++;
       return;
@@ -479,9 +515,9 @@ async function writeOutput(
 
     const record: WikipediaResult = {
       qid,
-      label: title.replaceAll('_', ' '),
+      label: utf8Title.replaceAll('_', ' '),
       sitelinkCount: 1,
-      wikipedia: `https://en.wikipedia.org/wiki/${encodeURIComponent(title)}`,
+      wikipedia: `https://en.wikipedia.org/wiki/${encodeURIComponent(utf8Title)}`,
     };
     out.write(JSON.stringify(record) + '\n');
     written++;
@@ -492,7 +528,7 @@ async function writeOutput(
 
   await new Promise<void>((resolve) => out.end(resolve));
   console.log(
-    `  Written: ${written.toLocaleString()} records, skipped: ${skipped.toLocaleString()}`
+    `  Written: ${written.toLocaleString()} records, skipped: ${skipped.toLocaleString()}, nameFiltered: ${nameFiltered.toLocaleString()}`
   );
 }
 
