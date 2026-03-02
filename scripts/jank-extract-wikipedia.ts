@@ -12,7 +12,6 @@ import { fileURLToPath } from 'node:url';
 import { downloadFile } from './utils/download.js';
 
 const DATA_DIR = 'data';
-const ROOT_CATEGORY = 'Fictional_characters';
 const OUTPUT_FILE = 'fictional_wikipedia.ndjson';
 const WIKIMEDIA_BASE = 'https://dumps.wikimedia.org/enwiki/latest';
 
@@ -187,109 +186,6 @@ async function streamTable(
   for await (const chunk of gz) parser(chunk as Buffer);
 }
 
-async function buildCatTitleToPageId(
-  filePath: string
-): Promise<Map<string, number>> {
-  console.log(`\nPass 1: page → category title→page_id`);
-  const catTitleToPageId = new Map<string, number>();
-  let rows = 0;
-
-  const parse = createTableParser('page', (fields) => {
-    if (Number.parseInt(fields[PAGE_COL.ns], 10) !== 14) return;
-    if (fields[PAGE_COL.redirect] === '1') return;
-    catTitleToPageId.set(
-      fields[PAGE_COL.title],
-      Number.parseInt(fields[PAGE_COL.id], 10)
-    );
-    if (++rows % 500_000 === 0)
-      console.log(`  ${(rows / 1_000_000).toFixed(1)}M category pages scanned`);
-  });
-
-  await streamTable(filePath, parse);
-  console.log(
-    `  Done: ${catTitleToPageId.size.toLocaleString()} category pages`
-  );
-  return catTitleToPageId;
-}
-
-async function buildLinktargetMaps(
-  filePath: string,
-  catTitleToPageId: Map<string, number>
-): Promise<{
-  rootLtId: number | undefined;
-  catPageToLtId: Map<number, number>;
-  workLtIds: Set<number>;
-}> {
-  console.log(`\nPass 2: linktarget → catPageToLtId + rootLtId + workLtIds`);
-  const catPageToLtId = new Map<number, number>();
-  const workLtIds = new Set<number>();
-  let rootLtId: number | undefined;
-  let rows = 0;
-
-  const parse = createTableParser('linktarget', (fields) => {
-    if (Number.parseInt(fields[LT_COL.ns], 10) !== 14) return;
-    const title = fields[LT_COL.title];
-    const ltId = Number.parseInt(fields[LT_COL.id], 10);
-
-    if (title === ROOT_CATEGORY) rootLtId = ltId;
-
-    const pageId = catTitleToPageId.get(title);
-    if (pageId !== undefined) catPageToLtId.set(pageId, ltId);
-
-    const lower = title.toLowerCase();
-    if (WORK_KEYWORDS.some((kw) => lower.includes(kw))) workLtIds.add(ltId);
-
-    if (++rows % 1_000_000 === 0)
-      console.log(
-        `  ${rows / 1_000_000}M ns-14 rows, ${catPageToLtId.size.toLocaleString()} mapped, ${workLtIds.size.toLocaleString()} work`
-      );
-  });
-
-  await streamTable(filePath, parse);
-  console.log(
-    `  Done: catPageToLtId=${catPageToLtId.size.toLocaleString()}, workLtIds=${workLtIds.size.toLocaleString()}, rootLtId=${rootLtId}`
-  );
-  return { rootLtId, catPageToLtId, workLtIds };
-}
-
-async function buildCategoryMaps(
-  filePath: string,
-  workLtIds: Set<number>
-): Promise<{ subcatEdges: Map<number, Set<number>>; workIds: Set<number> }> {
-  console.log(`\nPass 3: categorylinks → subcatEdges + workIds`);
-  const subcatEdges = new Map<number, Set<number>>();
-  const workIds = new Set<number>();
-  let rows = 0;
-
-  const parse = createTableParser('categorylinks', (fields) => {
-    const type = fields[CL_COL.type];
-    const targetId = Number.parseInt(fields[CL_COL.targetId], 10);
-    const fromId = Number.parseInt(fields[CL_COL.from], 10);
-
-    if (type === 'subcat') {
-      let set = subcatEdges.get(targetId);
-      if (set === undefined) {
-        set = new Set();
-        subcatEdges.set(targetId, set);
-      }
-      set.add(fromId);
-    } else if (type === 'page' && workLtIds.has(targetId)) {
-      workIds.add(fromId);
-    }
-
-    if (++rows % 1_000_000 === 0)
-      console.log(
-        `  ${rows / 1_000_000}M rows, subcatEdges=${subcatEdges.size.toLocaleString()}, workIds=${workIds.size.toLocaleString()}`
-      );
-  });
-
-  await streamTable(filePath, parse);
-  console.log(
-    `  Done: subcatEdges=${subcatEdges.size.toLocaleString()}, workIds=${workIds.size.toLocaleString()}`
-  );
-  return { subcatEdges, workIds };
-}
-
 const CHARACTER_FRAGMENT_KEYWORDS = [
   'character',
   'cast',
@@ -325,75 +221,66 @@ function looksLikeCharacterName(title: string): boolean {
   return capitalizedCount >= 2;
 }
 
-function bfsFictionalLtIds(
-  rootLtId: number,
-  subcatEdges: Map<number, Set<number>>,
-  catPageToLtId: Map<number, number>,
-  catPageToTitle: Map<number, string>
-): Set<number> {
-  console.log(
-    `\nBFS from "${ROOT_CATEGORY}" (lt_id=${rootLtId}) with keyword filter...`
-  );
-  const visited = new Set<number>();
-  const queue: number[] = [rootLtId];
-
-  while (queue.length > 0) {
-    const ltId = queue.shift()!;
-    if (visited.has(ltId)) continue;
-    visited.add(ltId);
-
-    const subcats = subcatEdges.get(ltId);
-    if (!subcats) continue;
-
-    for (const catPageId of subcats) {
-      const childLtId = catPageToLtId.get(catPageId);
-      if (childLtId === undefined || visited.has(childLtId)) continue;
-      const title = catPageToTitle.get(catPageId) ?? '';
-      if (hasCharacterKeyword(title)) queue.push(childLtId);
-    }
-  }
-
-  console.log(
-    `  Visited ${visited.size.toLocaleString()} fictional-character categories`
-  );
-  return visited;
-}
-
-async function collectFictionalArticleIds(
-  filePath: string,
-  fictionalLtIds: Set<number>
+async function buildWorkLtIds(
+  filePath: string
 ): Promise<Set<number>> {
-  console.log(`\nPass 4: categorylinks → fictional character article page_ids`);
-  const articleIds = new Set<number>();
+  console.log(`\nPass 1: linktarget → workLtIds`);
+  const workLtIds = new Set<number>();
   let rows = 0;
 
-  const parse = createTableParser('categorylinks', (fields) => {
-    if (fields[CL_COL.type] !== 'page') return;
-    if (fictionalLtIds.has(Number.parseInt(fields[CL_COL.targetId], 10)))
-      articleIds.add(Number.parseInt(fields[CL_COL.from], 10));
+  const parse = createTableParser('linktarget', (fields) => {
+    if (Number.parseInt(fields[LT_COL.ns], 10) !== 14) return;
+    const title = fields[LT_COL.title];
+    const ltId = Number.parseInt(fields[LT_COL.id], 10);
+
+    const lower = title.toLowerCase();
+    if (WORK_KEYWORDS.some((kw) => lower.includes(kw))) workLtIds.add(ltId);
+
     if (++rows % 1_000_000 === 0)
       console.log(
-        `  ${rows / 1_000_000}M page rows, ${articleIds.size.toLocaleString()} found`
+        `  ${rows / 1_000_000}M ns-14 rows, ${workLtIds.size.toLocaleString()} work`
       );
   });
 
   await streamTable(filePath, parse);
   console.log(
-    `  Done: ${articleIds.size.toLocaleString()} fictional character article page_ids`
+    `  Done: workLtIds=${workLtIds.size.toLocaleString()}`
   );
-  return articleIds;
+  return workLtIds;
 }
 
-async function buildPageMaps(
+async function buildWorkIds(
   filePath: string,
-  articleIds: Set<number>,
+  workLtIds: Set<number>
+): Promise<Set<number>> {
+  console.log(`\nPass 2: categorylinks → workIds`);
+  const workIds = new Set<number>();
+  let rows = 0;
+
+  const parse = createTableParser('categorylinks', (fields) => {
+    if (fields[CL_COL.type] !== 'page') return;
+    const targetId = Number.parseInt(fields[CL_COL.targetId], 10);
+    if (workLtIds.has(targetId))
+      workIds.add(Number.parseInt(fields[CL_COL.from], 10));
+
+    if (++rows % 1_000_000 === 0)
+      console.log(
+        `  ${rows / 1_000_000}M rows, workIds=${workIds.size.toLocaleString()}`
+      );
+  });
+
+  await streamTable(filePath, parse);
+  console.log(
+    `  Done: workIds=${workIds.size.toLocaleString()}`
+  );
+  return workIds;
+}
+
+async function buildWorkTitleToPageId(
+  filePath: string,
   workIds: Set<number>
-): Promise<{
-  artTitles: Map<number, string>;
-  workTitleToPageId: Map<string, number>;
-}> {
-  console.log(`\nPass 5: page → artTitles + workTitleToPageId`);
-  const artTitles = new Map<number, string>();
+): Promise<Map<string, number>> {
+  console.log(`\nPass 3: page → workTitleToPageId`);
   const workTitleToPageId = new Map<string, number>();
   let rows = 0;
 
@@ -401,28 +288,26 @@ async function buildPageMaps(
     if (Number.parseInt(fields[PAGE_COL.ns], 10) !== 0) return;
     if (fields[PAGE_COL.redirect] === '1') return;
     const pageId = Number.parseInt(fields[PAGE_COL.id], 10);
-    const title = fields[PAGE_COL.title];
-    if (articleIds.has(pageId) && !workIds.has(pageId))
-      artTitles.set(pageId, title);
-    if (workIds.has(pageId)) workTitleToPageId.set(title, pageId);
+    if (workIds.has(pageId))
+      workTitleToPageId.set(fields[PAGE_COL.title], pageId);
     if (++rows % 1_000_000 === 0)
       console.log(
-        `  ${rows / 1_000_000}M article rows, artTitles=${artTitles.size.toLocaleString()}, workTitles=${workTitleToPageId.size.toLocaleString()}`
+        `  ${rows / 1_000_000}M article rows, workTitles=${workTitleToPageId.size.toLocaleString()}`
       );
   });
 
   await streamTable(filePath, parse);
   console.log(
-    `  Done: artTitles=${artTitles.size.toLocaleString()}, workTitleToPageId=${workTitleToPageId.size.toLocaleString()}`
+    `  Done: workTitleToPageId=${workTitleToPageId.size.toLocaleString()}`
   );
-  return { artTitles, workTitleToPageId };
+  return workTitleToPageId;
 }
 
 async function fetchCharacterRedirectIds(
   filePath: string,
   workTitleToPageId: Map<string, number>
 ): Promise<Map<number, string>> {
-  console.log(`\nPass 6: redirect → character redirect page_ids + fragments`);
+  console.log(`\nPass 4: redirect → character redirect page_ids + fragments`);
   const charRedirectFragments = new Map<number, string>();
   let rows = 0;
 
@@ -455,7 +340,7 @@ async function fetchRedirectTitles(
   charRedirectFragments: Map<number, string>
 ): Promise<Map<number, string>> {
   console.log(
-    `\nPass 7: page → titles for ${charRedirectFragments.size.toLocaleString()} character redirects`
+    `\nPass 5: page → titles for ${charRedirectFragments.size.toLocaleString()} character redirects`
   );
   const charRedirectTitles = new Map<number, string>();
   let rows = 0;
@@ -480,7 +365,6 @@ async function fetchRedirectTitles(
 }
 
 async function writeOutput(
-  artTitles: Map<number, string>,
   charRedirectTitles: Map<number, string>
 ): Promise<void> {
   mkdirSync(DATA_DIR, { recursive: true });
@@ -492,25 +376,23 @@ async function writeOutput(
   let written = 0;
   let skipped = 0;
 
-  function emit(title: string, isRedirect: boolean): void {
+  for (const title of charRedirectTitles.values()) {
     if (
       title.includes('(disambiguation)') ||
       title.startsWith('List_of') ||
-      title.startsWith('Lists_of')
+      title.startsWith('Lists_of') ||
+      title.includes('(') ||
+      title.includes('/')
     ) {
       skipped++;
-      return;
-    }
-    if (isRedirect && (title.includes('(') || title.includes('/'))) {
-      skipped++;
-      return;
+      continue;
     }
 
     const utf8Title = Buffer.from(title, 'latin1').toString('utf8');
     const qid = `enwiki:${utf8Title}`;
     if (writtenQids.has(qid)) {
       skipped++;
-      return;
+      continue;
     }
     writtenQids.add(qid);
 
@@ -523,9 +405,6 @@ async function writeOutput(
     out.write(JSON.stringify(record) + '\n');
     written++;
   }
-
-  for (const title of artTitles.values()) emit(title, false);
-  for (const title of charRedirectTitles.values()) emit(title, true);
 
   await new Promise<void>((resolve) => out.end(resolve));
   console.log(
@@ -562,48 +441,12 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     await downloadIfMissing(linktargetDump);
     await downloadIfMissing(redirectDump);
 
-    const catTitleToPageId = await buildCatTitleToPageId(pageDump);
+    const workLtIds = await buildWorkLtIds(linktargetDump);
 
-    const catPageToTitle = new Map<number, string>();
-    for (const [title, pageId] of catTitleToPageId)
-      catPageToTitle.set(pageId, title);
-
-    const { rootLtId, catPageToLtId, workLtIds } = await buildLinktargetMaps(
-      linktargetDump,
-      catTitleToPageId
-    );
-    catTitleToPageId.clear();
-    if (rootLtId === undefined)
-      throw new Error(`"${ROOT_CATEGORY}" not found in linktarget dump`);
-
-    const { subcatEdges, workIds } = await buildCategoryMaps(
-      categoryLinksDump,
-      workLtIds
-    );
+    const workIds = await buildWorkIds(categoryLinksDump, workLtIds);
     workLtIds.clear();
 
-    const fictionalLtIds = bfsFictionalLtIds(
-      rootLtId,
-      subcatEdges,
-      catPageToLtId,
-      catPageToTitle
-    );
-    subcatEdges.clear();
-    catPageToLtId.clear();
-    catPageToTitle.clear();
-
-    const articleIds = await collectFictionalArticleIds(
-      categoryLinksDump,
-      fictionalLtIds
-    );
-    fictionalLtIds.clear();
-
-    const { artTitles, workTitleToPageId } = await buildPageMaps(
-      pageDump,
-      articleIds,
-      workIds
-    );
-    articleIds.clear();
+    const workTitleToPageId = await buildWorkTitleToPageId(pageDump, workIds);
     workIds.clear();
 
     const charRedirectFragments = await fetchCharacterRedirectIds(
@@ -617,7 +460,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
       charRedirectFragments
     );
 
-    await writeOutput(artTitles, charRedirectTitles);
+    await writeOutput(charRedirectTitles);
     console.log('\nDone.');
   } catch (error) {
     console.error('Fatal:', error);
