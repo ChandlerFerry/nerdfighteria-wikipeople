@@ -12,6 +12,7 @@ const TMP_DIR = 'data/pageviews-tmp';
 const ACCUM_DB_PATH = 'data/pageviews-tmp/accumulator.db';
 const BATCH_SIZE = 10_000;
 const BASE_URL = 'https://dumps.wikimedia.org/other/pageview_complete/monthly';
+const DOWNLOAD_CONCURRENCY = 2;
 
 function ensureBzcat(): void {
   try {
@@ -33,8 +34,24 @@ function openAccumulator(): DatabaseSync {
       title TEXT PRIMARY KEY,
       views INTEGER NOT NULL DEFAULT 0
     );
+    CREATE TABLE IF NOT EXISTS completed_files (
+      filename TEXT PRIMARY KEY
+    );
   `);
   return database;
+}
+
+function getCompletedFiles(database: DatabaseSync): Set<string> {
+  const rows = database.prepare('SELECT filename FROM completed_files').all() as Array<{
+    filename: string;
+  }>;
+  return new Set(rows.map((r) => r.filename));
+}
+
+function markCompleted(database: DatabaseSync, filename: string): void {
+  database
+    .prepare('INSERT OR IGNORE INTO completed_files (filename) VALUES (?)')
+    .run(filename);
 }
 
 function processBz2Stream(
@@ -167,15 +184,86 @@ async function extract(): Promise<void> {
 
   const database = openAccumulator();
 
-  for (const url of urls) {
+  // Handle --skip-until for bootstrapping resume state from a previous run
+  const skipUntilIndex = process.argv.indexOf('--skip-until');
+  if (skipUntilIndex !== -1 && skipUntilIndex + 1 < process.argv.length) {
+    const skipUntil = process.argv[skipUntilIndex + 1];
+    const cutoff = urls.findIndex((url) => url.split('/').pop() === skipUntil);
+    if (cutoff === -1) {
+      console.error(
+        `Warning: --skip-until file "${skipUntil}" not found in dump list.`
+      );
+    } else {
+      for (let index = 0; index <= cutoff; index++) {
+        markCompleted(database, urls[index].split('/').pop()!);
+      }
+      console.log(
+        `Marked ${cutoff + 1} files as already processed (through ${skipUntil}).`
+      );
+    }
+  }
+
+  // Filter to remaining files
+  const completed = getCompletedFiles(database);
+  const remaining = urls.filter(
+    (url) => !completed.has(url.split('/').pop()!)
+  );
+
+  if (completed.size > 0) {
+    console.log(
+      `Resuming: ${completed.size} files already processed, ${remaining.length} remaining.`
+    );
+  }
+
+  if (remaining.length === 0) {
+    console.log('All files already processed.');
+    writeNdjson(database);
+    database.close();
+    try {
+      rmSync(TMP_DIR, { recursive: true });
+    } catch {
+      /* ignore */
+    }
+    console.log('\nExtraction complete.');
+    return;
+  }
+
+  // Pipeline: keep up to DOWNLOAD_CONCURRENCY downloads ahead of processing
+  let nextIndex = 0;
+  const downloads: Promise<{ filename: string; destination: string }>[] = [];
+
+  const enqueueDownload = (url: string) => {
     const filename = url.split('/').pop()!;
     const destination = `${TMP_DIR}/${filename}`;
-    console.log(`\nDownloading: ${filename}`);
+    console.log(`Downloading: ${filename}`);
+    const promise = downloadFile(url, destination).then(() => ({
+      filename,
+      destination,
+    }));
+    promise.catch(() => {}); // Prevent unhandled rejection while queued
+    downloads.push(promise);
+  };
+
+  // Seed initial downloads
+  while (nextIndex < Math.min(DOWNLOAD_CONCURRENCY, remaining.length)) {
+    enqueueDownload(remaining[nextIndex]);
+    nextIndex++;
+  }
+
+  // Process files in order, starting the next download as each completes
+  for (let index = 0; index < remaining.length; index++) {
+    const { filename, destination } = await downloads[index];
+
+    // Start next download while we process this file
+    if (nextIndex < remaining.length) {
+      enqueueDownload(remaining[nextIndex]);
+      nextIndex++;
+    }
 
     try {
-      await downloadFile(url, destination);
       console.log(`Processing: ${filename}`);
       await processBz2Stream(destination, database);
+      markCompleted(database, filename);
     } finally {
       if (existsSync(destination)) {
         rmSync(destination);
