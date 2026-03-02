@@ -88,6 +88,11 @@ const stmts = {
     JOIN entities e ON entities_fts.rowid = e.rowid
     WHERE entities_fts MATCH ? AND e.category = ?
   `),
+  categoryCounts: database.prepare(`
+    SELECT category, COUNT(*) AS count
+    FROM entities
+    GROUP BY category
+  `),
 };
 
 export function getRandom(category: Category, n: number): EntityRow[] {
@@ -142,6 +147,15 @@ export function search(
   } catch {
     return undefined;
   }
+}
+
+export function getCategoryCounts(): Record<string, number> {
+  const rows = stmts.categoryCounts.all();
+  const counts: Record<string, number> = {};
+  for (const row of rows) {
+    counts[row.category as string] = row.count as number;
+  }
+  return counts;
 }
 
 export function close(): void {

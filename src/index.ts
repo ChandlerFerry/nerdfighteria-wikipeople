@@ -14,12 +14,14 @@ import {
   getRandom,
   autocomplete,
   search,
+  getCategoryCounts,
   close,
 } from './database/repository.js';
 import healthRoute from './api/routes/health.js';
 import randomRoute from './api/routes/random.js';
 import autocompleteRoute from './api/routes/autocomplete.js';
 import searchRoute from './api/routes/search.js';
+import statsRoute from './api/routes/stats.js';
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -27,6 +29,7 @@ declare module 'fastify' {
       getRandom: typeof getRandom;
       autocomplete: typeof autocomplete;
       search: typeof search;
+      getCategoryCounts: typeof getCategoryCounts;
     };
   }
 }
@@ -56,12 +59,13 @@ export async function createServer(): Promise<FastifyInstance> {
 
   await fastify.register(swaggerUi, { routePrefix: '/documentation' });
 
-  fastify.decorate('repo', { getRandom, autocomplete, search });
+  fastify.decorate('repo', { getRandom, autocomplete, search, getCategoryCounts });
   fastify.addHook('onClose', async () => close());
 
   await fastify.register(cors, { origin: true, methods: ['GET'] });
 
   await fastify.register(healthRoute);
+  await fastify.register(statsRoute);
 
   await fastify.register(async (scope) => {
     await scope.register(rateLimit, { max: 100, timeWindow: '1 minute' });
