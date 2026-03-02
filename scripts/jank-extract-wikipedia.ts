@@ -60,7 +60,7 @@ const NAME_PARTICLES = new Set([
 const PAGE_COL = { id: 0, ns: 1, title: 2, redirect: 3 } as const;
 const LT_COL = { id: 0, ns: 1, title: 2 } as const;
 const CL_COL = { from: 0, type: 4, targetId: 6 } as const;
-const REDIRECT_COL = { from: 0, ns: 1, title: 2 } as const;
+const REDIRECT_COL = { from: 0, ns: 1, title: 2, fragment: 4 } as const;
 
 interface WikipediaResult {
   qid: string;
@@ -306,12 +306,29 @@ async function buildCategoryMaps(
   return { subcatEdges, workIds };
 }
 
+const CHARACTER_FRAGMENT_KEYWORDS = [
+  'character',
+  'cast',
+  'protagonist',
+  'antagonist',
+  'villain',
+  // 'hero', // Broke on https://en.wikipedia.org/wiki/Dune_prequel_series#Heroes_of_Dune
+  'persona',
+  'fictional',
+];
+
+function isCharacterFragment(fragment: string): boolean {
+  const lower = fragment.toLowerCase();
+  return CHARACTER_FRAGMENT_KEYWORDS.some((kw) => lower.includes(kw));
+}
+
 function isFictionalCharCategory(title: string): boolean {
   const lower = title.toLowerCase();
   return CHAR_BFS_KEYWORDS.some((kw) => lower.includes(kw));
 }
 
 function looksLikeCharacterName(title: string): boolean {
+  if (/[!:?;.,()[\]]/.test(title)) return false;
   const words = title.split('_');
   if (words.length < 2 || words.length > 4) return false;
 
@@ -424,32 +441,41 @@ async function buildPageMaps(
 async function fetchCharacterRedirectIds(
   filePath: string,
   workTitleToPageId: Map<string, number>
-): Promise<Set<number>> {
-  console.log(`\nPass 6: redirect → character redirect page_ids`);
-  const charRedirectIds = new Set<number>();
+): Promise<Map<number, string>> {
+  console.log(`\nPass 6: redirect → character redirect page_ids + fragments`);
+  const charRedirectFragments = new Map<number, string>();
   let rows = 0;
 
   const parse = createTableParser('redirect', (fields) => {
     if (Number.parseInt(fields[REDIRECT_COL.ns], 10) !== 0) return;
-    if (!workTitleToPageId.has(fields[REDIRECT_COL.title])) return;
-    charRedirectIds.add(Number.parseInt(fields[REDIRECT_COL.from], 10));
+    const target = fields[REDIRECT_COL.title];
+    if (!workTitleToPageId.has(target)) return;
+    const frag = fields[REDIRECT_COL.fragment];
+    const rawFrag = frag === 'NULL' || frag === '' ? '' : frag;
+    if (
+      rawFrag === '' ||
+      (!isCharacterFragment(rawFrag) && !looksLikeCharacterName(rawFrag))
+    )
+      return;
+    const pageId = Number.parseInt(fields[REDIRECT_COL.from], 10);
+    charRedirectFragments.set(pageId, rawFrag);
     if (++rows % 100_000 === 0)
       console.log(`  ${(rows / 1_000_000).toFixed(1)}M matched redirects`);
   });
 
   await streamTable(filePath, parse);
   console.log(
-    `  Done: ${charRedirectIds.size.toLocaleString()} character redirect page_ids`
+    `  Done: ${charRedirectFragments.size.toLocaleString()} character redirects with fragments`
   );
-  return charRedirectIds;
+  return charRedirectFragments;
 }
 
 async function fetchRedirectTitles(
   filePath: string,
-  charRedirectIds: Set<number>
+  charRedirectFragments: Map<number, string>
 ): Promise<Map<number, string>> {
   console.log(
-    `\nPass 7: page → titles for ${charRedirectIds.size.toLocaleString()} character redirects`
+    `\nPass 7: page → titles for ${charRedirectFragments.size.toLocaleString()} character redirects`
   );
   const charRedirectTitles = new Map<number, string>();
   let rows = 0;
@@ -458,7 +484,7 @@ async function fetchRedirectTitles(
     if (Number.parseInt(fields[PAGE_COL.ns], 10) !== 0) return;
     if (fields[PAGE_COL.redirect] !== '1') return;
     const pageId = Number.parseInt(fields[PAGE_COL.id], 10);
-    if (charRedirectIds.has(pageId))
+    if (charRedirectFragments.has(pageId))
       charRedirectTitles.set(pageId, fields[PAGE_COL.title]);
     if (++rows % 1_000_000 === 0)
       console.log(
@@ -485,7 +511,6 @@ async function writeOutput(
   const writtenQids = new Set<string>();
   let written = 0;
   let skipped = 0;
-  let nameFiltered = 0;
 
   function emit(title: string, isRedirect: boolean): void {
     if (
@@ -498,10 +523,6 @@ async function writeOutput(
     }
     if (isRedirect && (title.includes('(') || title.includes('/'))) {
       skipped++;
-      return;
-    }
-    if (isRedirect && !looksLikeCharacterName(title)) {
-      nameFiltered++;
       return;
     }
 
@@ -528,7 +549,7 @@ async function writeOutput(
 
   await new Promise<void>((resolve) => out.end(resolve));
   console.log(
-    `  Written: ${written.toLocaleString()} records, skipped: ${skipped.toLocaleString()}, nameFiltered: ${nameFiltered.toLocaleString()}`
+    `  Written: ${written.toLocaleString()} records, skipped: ${skipped.toLocaleString()}`
   );
 }
 
@@ -605,7 +626,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     articleIds.clear();
     workIds.clear();
 
-    const charRedirectIds = await fetchCharacterRedirectIds(
+    const charRedirectFragments = await fetchCharacterRedirectIds(
       redirectDump,
       workTitleToPageId
     );
@@ -613,9 +634,8 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
 
     const charRedirectTitles = await fetchRedirectTitles(
       pageDump,
-      charRedirectIds
+      charRedirectFragments
     );
-    charRedirectIds.clear();
 
     await writeOutput(artTitles, charRedirectTitles);
     console.log('\nDone.');
