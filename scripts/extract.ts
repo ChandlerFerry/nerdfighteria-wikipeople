@@ -60,11 +60,11 @@ interface Result {
   wikidata: string;
 }
 
-function matchClass(entity: Entity): { category: string; type: string | undefined } | undefined {
+function matchClass(entity: Entity): { qid: string; category: string; type: string | undefined } | undefined {
   for (const claim of entity.claims?.P31 ?? []) {
     if (claim.rank === "deprecated" || claim.mainsnak.snaktype !== "value") continue;
     const id = claim.mainsnak.datavalue?.value?.id;
-    if (id && id in CLASSES) return CLASSES[id];
+    if (id && id in CLASSES) return { qid: id, ...CLASSES[id] };
   }
   return undefined;
 }
@@ -100,6 +100,7 @@ async function processDump(dumpPath: string) {
 
   let processed = 0;
   let matched = 0;
+  const matchCounts: Record<string, number> = Object.fromEntries(Object.keys(CLASSES).map((qid) => [qid, 0]));
 
   for await (const line of rl) {
     const trimmed = line.trim();
@@ -119,6 +120,7 @@ async function processDump(dumpPath: string) {
         if (result) {
           out[match.category as keyof typeof out].write(JSON.stringify(result) + "\n");
           matched++;
+          matchCounts[match.qid]++;
         }
       }
     }
@@ -129,7 +131,15 @@ async function processDump(dumpPath: string) {
   }
 
   await Promise.all(Object.values(out).map((s) => new Promise<void>((resolve) => s.end(resolve))));
-  console.log(`\nDone. ${processed.toLocaleString()} entities processed, ${matched.toLocaleString()} matched.`);
+  console.log(`\nDone. ${processed.toLocaleString()} entities processed, ${matched.toLocaleString()} matched.\n`);
+
+  console.log("Per-QID breakdown:");
+  const maxLabel = Math.max(...Object.values(CLASSES).map((c) => (c.type ?? c.category).length));
+  for (const [qid, cls] of Object.entries(CLASSES)) {
+    const count = matchCounts[qid];
+    const label = (cls.type ?? cls.category).padEnd(maxLabel);
+    console.log(`  ${qid.padEnd(12)} ${label}  ${count.toLocaleString()}${count === 0 ? "  ← no hits" : ""}`);
+  }
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
