@@ -5,9 +5,10 @@
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
-    "script:extract": "tsx scripts/extract.ts latest-all.json.gz",
-    "script:pageviews": "tsx scripts/pageviews.ts",
-    "script:import": "tsx scripts/import.ts",
+    "script:extract-wikidata": "tsx scripts/extract-wikidata.ts latest-all.json.gz",
+    "script:extract-wikipedia": "tsx scripts/jank-extract-wikipedia.ts enwiki-latest-page.sql.gz enwiki-latest-categorylinks.sql.gz enwiki-latest-linktarget.sql.gz enwiki-latest-redirect.sql.gz",
+    "script:extract-pageviews": "tsx scripts/extract-pageviews.ts",
+    "script:build-database": "tsx scripts/build-database.ts",
     "serve": "node dist/index.js",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix"
@@ -29,6 +30,8 @@
   "dependencies": {
     "@fastify/cors": "^11.2.0",
     "@fastify/rate-limit": "^10.3.0",
+    "@fastify/swagger": "^9.7.0",
+    "@fastify/swagger-ui": "^5.2.5",
     "fastify": "^5.7.4",
     "fastify-type-provider-zod": "^6.1.0",
     "zod": "^4.3.6"
