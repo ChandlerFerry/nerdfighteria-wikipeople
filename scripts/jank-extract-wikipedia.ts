@@ -16,22 +16,6 @@ const ROOT_CATEGORY = 'Fictional_characters';
 const OUTPUT_FILE = 'fictional_wikipedia.ndjson';
 const WIKIMEDIA_BASE = 'https://dumps.wikimedia.org/enwiki/latest';
 
-const CHAR_BFS_KEYWORDS = [
-  'fictional',
-  'character',
-  'comic',
-  'manga',
-  'anime',
-  'fantasy',
-  'fiction',
-  'superhero',
-  'animation',
-  'animated',
-  'mythology',
-  'folklore',
-  'legend',
-];
-
 const WORK_KEYWORDS = [
   'novel',
   'film',
@@ -317,14 +301,9 @@ const CHARACTER_FRAGMENT_KEYWORDS = [
   'fictional',
 ];
 
-function isCharacterFragment(fragment: string): boolean {
-  const lower = fragment.toLowerCase();
+function hasCharacterKeyword(text: string): boolean {
+  const lower = text.toLowerCase();
   return CHARACTER_FRAGMENT_KEYWORDS.some((kw) => lower.includes(kw));
-}
-
-function isFictionalCharCategory(title: string): boolean {
-  const lower = title.toLowerCase();
-  return CHAR_BFS_KEYWORDS.some((kw) => lower.includes(kw));
 }
 
 function looksLikeCharacterName(title: string): boolean {
@@ -370,7 +349,7 @@ function bfsFictionalLtIds(
       const childLtId = catPageToLtId.get(catPageId);
       if (childLtId === undefined || visited.has(childLtId)) continue;
       const title = catPageToTitle.get(catPageId) ?? '';
-      if (isFictionalCharCategory(title)) queue.push(childLtId);
+      if (hasCharacterKeyword(title)) queue.push(childLtId);
     }
   }
 
@@ -423,7 +402,8 @@ async function buildPageMaps(
     if (fields[PAGE_COL.redirect] === '1') return;
     const pageId = Number.parseInt(fields[PAGE_COL.id], 10);
     const title = fields[PAGE_COL.title];
-    if (articleIds.has(pageId)) artTitles.set(pageId, title);
+    if (articleIds.has(pageId) && !workIds.has(pageId))
+      artTitles.set(pageId, title);
     if (workIds.has(pageId)) workTitleToPageId.set(title, pageId);
     if (++rows % 1_000_000 === 0)
       console.log(
@@ -454,7 +434,7 @@ async function fetchCharacterRedirectIds(
     const rawFrag = frag === 'NULL' || frag === '' ? '' : frag;
     if (
       rawFrag === '' ||
-      (!isCharacterFragment(rawFrag) && !looksLikeCharacterName(rawFrag))
+      (!hasCharacterKeyword(rawFrag) && !looksLikeCharacterName(rawFrag))
     )
       return;
     const pageId = Number.parseInt(fields[REDIRECT_COL.from], 10);
