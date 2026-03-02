@@ -1,11 +1,16 @@
-import type { SQLOutputValue } from "node:sqlite";
-import { openDatabase } from "./connection.js";
-import type { Category, EntityRow, SearchParameters, SearchResponse } from "./types.js";
+import type { SQLOutputValue } from 'node:sqlite';
+import { openDatabase } from './connection.js';
+import type {
+  Category,
+  EntityRow,
+  SearchParameters,
+  SearchResponse,
+} from './types.js';
 
 function buildFtsQuery(raw: string): string | undefined {
   const tokens = raw.split(/[^\p{L}\p{N}]+/u).filter((t) => t.length > 0);
   if (tokens.length === 0) return undefined;
-  return tokens.map((t) => `${t}*`).join(" ");
+  return tokens.map((t) => `${t}*`).join(' ');
 }
 
 function toEntityRow(row: Record<string, SQLOutputValue>): EntityRow {
@@ -87,7 +92,9 @@ const stmts = {
 
 export function getRandom(category: Category, n: number): EntityRow[] {
   const pivot = Math.random();
-  const first = stmts.randomByCategory.all(category, pivot, n).map((row) => toEntityRow(row));
+  const first = stmts.randomByCategory
+    .all(category, pivot, n)
+    .map((row) => toEntityRow(row));
 
   if (first.length >= n) return shuffle(first);
 
@@ -102,13 +109,17 @@ export function autocomplete(q: string, limit: number): EntityRow[] {
   const ftsQuery = buildFtsQuery(q);
   if (!ftsQuery) return [];
   try {
-    return stmts.autocomplete.all(ftsQuery, limit).map((row) => toEntityRow(row));
+    return stmts.autocomplete
+      .all(ftsQuery, limit)
+      .map((row) => toEntityRow(row));
   } catch {
     return [];
   }
 }
 
-export function search(parameters: SearchParameters): SearchResponse | undefined {
+export function search(
+  parameters: SearchParameters
+): SearchResponse | undefined {
   const ftsQuery = buildFtsQuery(parameters.q);
   if (!ftsQuery) return undefined;
 
@@ -116,8 +127,12 @@ export function search(parameters: SearchParameters): SearchResponse | undefined
     const { limit, offset, category } = parameters;
 
     const results = category
-      ? stmts.searchWithCategory.all(ftsQuery, category, limit, offset).map((row) => toEntityRow(row))
-      : stmts.search.all(ftsQuery, limit, offset).map((row) => toEntityRow(row));
+      ? stmts.searchWithCategory
+          .all(ftsQuery, category, limit, offset)
+          .map((row) => toEntityRow(row))
+      : stmts.search
+          .all(ftsQuery, limit, offset)
+          .map((row) => toEntityRow(row));
 
     const countRow = category
       ? stmts.searchCountWithCategory.get(ftsQuery, category)

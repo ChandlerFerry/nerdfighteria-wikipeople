@@ -1,6 +1,6 @@
-import { DatabaseSync } from "node:sqlite";
+import { DatabaseSync } from 'node:sqlite';
 
-export const DB_PATH = "data/people.db";
+export const DB_PATH = 'data/people.db';
 
 export function openDatabase(): DatabaseSync {
   const database = new DatabaseSync(DB_PATH);

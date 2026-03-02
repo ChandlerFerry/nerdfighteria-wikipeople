@@ -1,15 +1,15 @@
-import { z } from "zod";
-import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
+import { z } from 'zod';
+import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 
 const randomRoute: FastifyPluginAsyncZod = async (fastify) => {
   fastify.get(
-    "/random",
+    '/random',
     {
       schema: {
-        tags: ["Browse"],
-        summary: "Random people",
+        tags: ['Browse'],
+        summary: 'Random people',
         description:
-          "Returns a random sample from each category. Fast - uses a pre-built random index rather than a full table scan.",
+          'Returns a random sample from each category. Fast - uses a pre-built random index rather than a full table scan.',
         querystring: z.object({
           n: z.coerce.number().int().min(1).max(500).default(50),
         }),
@@ -18,9 +18,9 @@ const randomRoute: FastifyPluginAsyncZod = async (fastify) => {
     async (request) => {
       const { n } = request.query;
       return {
-        humans:     fastify.repo.getRandom("humans",    n),
-        fictional:  fastify.repo.getRandom("fictional",  n),
-        historical: fastify.repo.getRandom("historical", n),
+        humans: fastify.repo.getRandom('humans', n),
+        fictional: fastify.repo.getRandom('fictional', n),
+        historical: fastify.repo.getRandom('historical', n),
       };
     }
   );

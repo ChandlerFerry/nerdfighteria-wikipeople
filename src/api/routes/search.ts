@@ -1,18 +1,18 @@
-import { z } from "zod";
-import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
+import { z } from 'zod';
+import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 
 const searchRoute: FastifyPluginAsyncZod = async (fastify) => {
   fastify.get(
-    "/search",
+    '/search',
     {
       schema: {
-        tags: ["Search"],
-        summary: "Full-text search",
+        tags: ['Search'],
+        summary: 'Full-text search',
         description:
-          "BM25-ranked full-text search with pagination and optional category filter. Returns 400 if the query produces no valid FTS tokens after sanitisation.",
+          'BM25-ranked full-text search with pagination and optional category filter. Returns 400 if the query produces no valid FTS tokens after sanitisation.',
         querystring: z.object({
           q: z.string().min(2).max(100),
-          category: z.enum(["humans", "fictional", "historical"]).optional(),
+          category: z.enum(['humans', 'fictional', 'historical']).optional(),
           limit: z.coerce.number().int().min(1).max(100).default(20),
           offset: z.coerce.number().int().min(0).default(0),
         }),
@@ -24,7 +24,7 @@ const searchRoute: FastifyPluginAsyncZod = async (fastify) => {
       if (!result) {
         return reply
           .status(400)
-          .send({ error: "Query produced no valid tokens after sanitization" });
+          .send({ error: 'Query produced no valid tokens after sanitization' });
       }
       return result;
     }

@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS entities (
   sitelink_count INTEGER NOT NULL DEFAULT 0,
   pageviews      INTEGER NOT NULL DEFAULT 0,
   wikipedia      TEXT,
-  wikidata       TEXT    NOT NULL,
+  wikidata       TEXT,
   rand           REAL    NOT NULL
 );
 
@@ -26,4 +26,5 @@ END;
 
 CREATE INDEX IF NOT EXISTS idx_entities_category ON entities(category);
 CREATE INDEX IF NOT EXISTS idx_entities_rand ON entities(category, rand);
+CREATE INDEX IF NOT EXISTS idx_entities_wikipedia ON entities(wikipedia);
 `;
