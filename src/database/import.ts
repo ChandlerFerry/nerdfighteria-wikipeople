@@ -60,7 +60,7 @@ export async function importData(
       { file: 'data/historical.ndjson', category: 'historical' },
       {
         file: 'data/fictional_wikipedia.ndjson',
-        category: 'fictional',
+        category: 'fictional_wikipedia',
         dedup: true,
       },
     ];
