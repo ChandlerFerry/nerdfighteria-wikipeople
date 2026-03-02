@@ -39,6 +39,8 @@ Pageview counts come from Wikipedia's [monthly complete pageview dumps](https://
 
 ~11.6M entities across 3 categories extracted from Wikidata.
 
+There's a known issue where we don't find fictional characters like [Hazel Grace Lancaster](https://en.wikipedia.org/wiki/Hazel_Grace_Lancaster) because they exist only as a redirect to a novel. I am working on solving this.
+
 | QID | Category | Type | Count |
 |-----|----------|------|------:|
 | [Q5](https://www.wikidata.org/wiki/Q5) | humans | - | 11,593,234 |
