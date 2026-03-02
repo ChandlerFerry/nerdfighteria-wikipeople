@@ -57,7 +57,7 @@ export async function importData(
     [
       { file: 'data/humans.ndjson', category: 'humans' },
       { file: 'data/fictional.ndjson', category: 'fictional' },
-      { file: 'data/historical.ndjson', category: 'historical' },
+      { file: 'data/apocryphal.ndjson', category: 'apocryphal' },
       {
         file: 'data/fictional_wikipedia.ndjson',
         category: 'fictional_wikipedia',

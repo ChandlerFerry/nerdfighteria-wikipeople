@@ -8,7 +8,7 @@ import { importData } from '../src/database/import.js';
 const REQUIRED_FILES = [
   'data/humans.ndjson',
   'data/fictional.ndjson',
-  'data/historical.ndjson',
+  'data/apocryphal.ndjson',
   'data/pageviews.ndjson',
 ];
 

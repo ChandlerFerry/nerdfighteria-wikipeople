@@ -37,7 +37,7 @@ const CLASSES: Record<string, { category: string; type: string | undefined }> =
     Q13002315: { category: 'fictional', type: 'legendary figure' },
     Q108065012: { category: 'fictional', type: 'radio character' },
     Q25810847: { category: 'fictional', type: 'folklore character' },
-    Q21070568: { category: 'historical', type: undefined },
+    Q21070568: { category: 'apocryphal', type: undefined },
   };
 
 interface Entity {
@@ -102,7 +102,7 @@ async function processDump(dumpPath: string) {
   const out = {
     humans: createWriteStream(path.join(DATA_DIR, 'humans.ndjson')),
     fictional: createWriteStream(path.join(DATA_DIR, 'fictional.ndjson')),
-    historical: createWriteStream(path.join(DATA_DIR, 'historical.ndjson')),
+    apocryphal: createWriteStream(path.join(DATA_DIR, 'apocryphal.ndjson')),
   };
 
   const rl = createInterface({

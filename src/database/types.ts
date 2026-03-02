@@ -1,4 +1,4 @@
-export const CATEGORIES = ['humans', 'fictional', 'fictional_wikipedia', 'historical'] as const;
+export const CATEGORIES = ['humans', 'fictional', 'fictional_wikipedia', 'apocryphal'] as const;
 export type Category = (typeof CATEGORIES)[number];
 
 export interface EntityRow {

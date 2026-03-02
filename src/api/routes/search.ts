@@ -12,7 +12,7 @@ const searchRoute: FastifyPluginAsyncZod = async (fastify) => {
           'BM25-ranked full-text search with pagination and optional category filter. Returns 400 if the query produces no valid FTS tokens after sanitisation.',
         querystring: z.object({
           q: z.string().min(2).max(100),
-          category: z.enum(['humans', 'fictional', 'fictional_wikipedia', 'historical']).optional(),
+          category: z.enum(['humans', 'fictional', 'fictional_wikipedia', 'apocryphal']).optional(),
           limit: z.coerce.number().int().min(1).max(100).default(20),
           offset: z.coerce.number().int().min(0).default(0),
         }),

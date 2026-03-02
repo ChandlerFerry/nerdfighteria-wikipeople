@@ -21,7 +21,7 @@ const randomRoute: FastifyPluginAsyncZod = async (fastify) => {
         humans: fastify.repo.getRandom('humans', n),
         fictional: fastify.repo.getRandom('fictional', n),
         fictional_wikipedia: fastify.repo.getRandom('fictional_wikipedia', n),
-        historical: fastify.repo.getRandom('historical', n),
+        apocryphal: fastify.repo.getRandom('apocryphal', n),
       };
     }
   );

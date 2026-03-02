@@ -45,7 +45,7 @@ export async function createServer(): Promise<FastifyInstance> {
       info: {
         title: 'Famous People API',
         description:
-          'Search, autocomplete, and browse 11.6 million people from Wikidata - real humans, historical figures, and fictional characters.\n\n**Rate limiting:** 100 requests / minute per IP on all endpoints except `/health`.',
+          'Search, autocomplete, and browse 11.6 million people from Wikidata - real humans, apocryphal figures, and fictional characters.\n\n**Rate limiting:** 100 requests / minute per IP on all endpoints except `/health`.',
         version: '1.0.0',
       },
       tags: [
