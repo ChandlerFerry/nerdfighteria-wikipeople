@@ -1,6 +1,7 @@
 dist
 node_modules
 *.json.gz
+*.sql.gz
 data/*
 data/*
 !data/.gitkeep
