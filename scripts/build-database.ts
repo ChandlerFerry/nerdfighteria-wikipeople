@@ -1,21 +1,20 @@
 #!/usr/bin/env node
 
 import { createReadStream, existsSync } from 'node:fs';
-import { createInterface } from 'node:readline';
 import { DatabaseSync } from 'node:sqlite';
 import { DB_PATH } from '../src/database/connection.js';
 import { SCHEMA } from '../src/database/schema.js';
 import type { Category } from '../src/database/types.js';
 import { createLineReader } from './utils/line-reader.js';
+import { createProgressCounter } from './utils/progress.js';
 
 const BATCH_SIZE = 10_000;
-const LOG_INTERVAL = 500_000;
+const PAGEVIEWS_PATH = 'data/pageviews.ndjson';
 
-const REQUIRED_FILES = [
-  'data/humans.ndjson',
-  'data/fictional.ndjson',
-  'data/apocryphal.ndjson',
-  'data/pageviews.ndjson',
+const SOURCES: Array<{ file: string; category: Category }> = [
+  { file: 'data/humans.ndjson', category: 'humans' },
+  { file: 'data/fictional.ndjson', category: 'fictional' },
+  { file: 'data/apocryphal.ndjson', category: 'apocryphal' },
 ];
 
 interface NdjsonRecord {
@@ -45,28 +44,22 @@ function normalizeWikiUrl(wikipedia: string): string {
   return title ? `https://en.wikipedia.org/wiki/${title}` : wikipedia;
 }
 
-async function loadPageviews(): Promise<Map<string, number>> {
+async function buildDatabase(): Promise<void> {
   console.log('Loading pageview data...');
-  const map = new Map<string, number>();
+  const pageviews = new Map<string, number>();
 
-  const rl = createLineReader(createReadStream('data/pageviews.ndjson'));
-
-  for await (const line of rl) {
+  const pvrl = createLineReader(createReadStream(PAGEVIEWS_PATH));
+  for await (const line of pvrl) {
     if (!line.trim()) continue;
     const { title, views } = JSON.parse(line) as {
       title: string;
       views: number;
     };
-    map.set(title, views);
+    pageviews.set(title, views);
   }
 
-  console.log(`Loaded ${map.size.toLocaleString()} pageview entries.`);
-  return map;
-}
+  console.log(`Loaded ${pageviews.size.toLocaleString()} pageview entries.`);
 
-async function importData(
-  pageviews?: Map<string, number>
-): Promise<void> {
   const database = new DatabaseSync(DB_PATH);
 
   database.exec(`
@@ -83,15 +76,9 @@ async function importData(
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
-  const sources: Array<{ file: string; category: Category }> = [
-    { file: 'data/humans.ndjson', category: 'humans' },
-    { file: 'data/fictional.ndjson', category: 'fictional' },
-    { file: 'data/apocryphal.ndjson', category: 'apocryphal' },
-  ];
-
   let totalImported = 0;
 
-  for (const { file, category } of sources) {
+  for (const { file, category } of SOURCES) {
     if (!existsSync(file)) {
       console.log(`Skipping ${file} (not found)`);
       continue;
@@ -100,18 +87,20 @@ async function importData(
     console.log(`Importing ${file}...`);
     let batch: NdjsonRecord[] = [];
     let fileImported = 0;
-    const rl = createInterface({
-      input: createReadStream(file),
-      crlfDelay: Number.POSITIVE_INFINITY,
+    const rl = createLineReader(createReadStream(file));
+
+    const tick = createProgressCounter(500_000, (count) => {
+      console.log(
+        `  ${count.toLocaleString()} imported from ${category}`
+      );
     });
 
     const flush = () => {
       database.exec('BEGIN');
       for (const r of batch) {
-        const views =
-          r.wikipedia && pageviews
-            ? (pageviews.get(extractTitle(r.wikipedia) ?? '') ?? 0)
-            : 0;
+        const views = r.wikipedia
+          ? (pageviews.get(extractTitle(r.wikipedia) ?? '') ?? 0)
+          : 0;
 
         /* eslint-disable unicorn/no-null -- SQLite requires null for NULL values */
         insert.run(
@@ -132,15 +121,11 @@ async function importData(
       fileImported += batch.length;
       totalImported += batch.length;
       batch = [];
-      if (fileImported % LOG_INTERVAL === 0) {
-        console.log(
-          `  ${fileImported.toLocaleString()} imported from ${category}`
-        );
-      }
     };
 
     for await (const line of rl) {
       if (!line.trim()) continue;
+      tick();
       const record = JSON.parse(line) as NdjsonRecord;
       batch.push(record);
       if (batch.length >= BATCH_SIZE) flush();
@@ -162,7 +147,9 @@ async function importData(
   );
 }
 
-const missing = REQUIRED_FILES.filter((f) => !existsSync(f));
+const missing = [...SOURCES.map((s) => s.file), PAGEVIEWS_PATH].filter(
+  (f) => !existsSync(f)
+);
 if (missing.length > 0) {
   console.error('Missing required data files:');
   for (const f of missing) console.error(`  ${f}`);
@@ -170,8 +157,7 @@ if (missing.length > 0) {
 }
 
 try {
-  const pageviews = await loadPageviews();
-  await importData(pageviews);
+  await buildDatabase();
 } catch (error) {
   console.error('Fatal:', error);
   process.exit(1);
