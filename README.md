@@ -68,3 +68,10 @@ There's a known issue where we don't find fictional characters like [Hazel Grace
 | [Q108065012](https://www.wikidata.org/wiki/Q108065012) | fictional | radio character | 20 |
 | [Q25810847](https://www.wikidata.org/wiki/Q25810847) | fictional | folklore character | 172 |
 | [Q21070568](https://www.wikidata.org/wiki/Q21070568) | apocryphal | - | 864 |
+
+## Known Limitations
+
+- **English-only:** Entities without an English Wikidata label are silently dropped during extraction. Pageview counts reflect English Wikipedia traffic only.
+- **Silent filtering:** Malformed JSON lines in the Wikidata dump are skipped without logging. No count of dropped entities is recorded.
+- **Redirect-only characters:** Fictional characters that exist only as Wikipedia redirects (e.g., Hazel Grace Lancaster) are not captured.
+- **P31-only classification:** Only the Wikidata "instance of" (P31) property is used to classify entities. People classified under subclasses not in our list are excluded.

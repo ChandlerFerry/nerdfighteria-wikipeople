@@ -2,11 +2,13 @@
 
 import { createReadStream, existsSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
+import seedrandom from 'seedrandom';
 import { DB_PATH, SCHEMA, type Category } from '../src/database/database.js';
 import { createLineReader } from './utils/line-reader.js';
 import { createProgressCounter } from './utils/progress.js';
 
 const BATCH_SIZE = 10_000;
+const random = seedrandom('nerdfighteria-wikipeople');
 const PAGEVIEWS_PATH = 'data/pageviews.ndjson';
 
 const SOURCES: Array<{ file: string; category: Category }> = [
@@ -111,7 +113,7 @@ async function buildDatabase(): Promise<void> {
           views,
           r.wikipedia ? normalizeWikiUrl(r.wikipedia) : null,
           r.wikidata ?? null,
-          Math.random()
+          random()
         );
         /* eslint-enable unicorn/no-null */
       }

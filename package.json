@@ -10,6 +10,7 @@
     "script:build-database": "tsx scripts/build-database.ts",
     "serve": "node dist/index.js",
     "serve:docs": "npx -y serve docs",
+    "test": "vitest run",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix"
   },
@@ -19,13 +20,16 @@
     "@eslint/js": "^10.0.1",
     "@tsconfig/node24": "^24.0.4",
     "@types/node": "^25.3.2",
+    "@types/seedrandom": "^3.0.8",
     "eslint": "^10.0.2",
     "eslint-plugin-unicorn": "^63.0.0",
     "prettier": "^3.8.1",
     "prettier-eslint": "17.0.0-alpha.1",
+    "seedrandom": "^3.0.5",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.56.1"
+    "typescript-eslint": "^8.56.1",
+    "vitest": "^4.0.18"
   },
   "dependencies": {
     "@fastify/cors": "^11.2.0",

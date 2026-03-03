@@ -27,28 +27,20 @@ function toEntityRow(row: Record<string, SQLOutputValue>): EntityRow {
   };
 }
 
-function shuffle<T>(array: T[]): T[] {
-  for (let index = array.length - 1; index > 0; index--) {
-    const index_ = Math.floor(Math.random() * (index + 1));
-    [array[index], array[index_]] = [array[index_], array[index]];
-  }
-  return array;
-}
-
 const stmts = {
-  randomByCategory: database.prepare(`
+  randomSingle: database.prepare(`
     SELECT qid, label, description, type, category, sitelink_count, pageviews, wikipedia, wikidata
     FROM entities
     WHERE category = ? AND rand >= ?
     ORDER BY rand
-    LIMIT ?
+    LIMIT 1
   `),
   autocomplete: database.prepare(`
     SELECT e.qid, e.label, e.description, e.type, e.category, e.sitelink_count, e.pageviews, e.wikipedia, e.wikidata
     FROM entities_fts
     JOIN entities e ON entities_fts.rowid = e.rowid
     WHERE entities_fts MATCH ?
-    ORDER BY rank
+    ORDER BY e.sitelink_count DESC
     LIMIT ?
   `),
   search: database.prepare(`
@@ -56,7 +48,7 @@ const stmts = {
     FROM entities_fts
     JOIN entities e ON entities_fts.rowid = e.rowid
     WHERE entities_fts MATCH ?
-    ORDER BY rank
+    ORDER BY e.sitelink_count DESC
     LIMIT ? OFFSET ?
   `),
   searchWithCategory: database.prepare(`
@@ -64,7 +56,7 @@ const stmts = {
     FROM entities_fts
     JOIN entities e ON entities_fts.rowid = e.rowid
     WHERE entities_fts MATCH ? AND e.category = ?
-    ORDER BY rank
+    ORDER BY e.sitelink_count DESC
     LIMIT ? OFFSET ?
   `),
   searchCount: database.prepare(`
@@ -86,19 +78,29 @@ const stmts = {
   `),
 };
 
+/**
+ * Adapted from https://jan.kneschke.de/projects/mysql/order-by-rand/
+ */
 export function getRandom(category: Category, n: number): EntityRow[] {
-  const pivot = Math.random();
-  const first = stmts.randomByCategory
-    .all(category, pivot, n)
-    .map((row) => toEntityRow(row));
+  const step = 1 / n;
+  const offset = Math.random() * step;
+  const results: EntityRow[] = [];
 
-  if (first.length >= n) return shuffle(first);
+  for (let index = 0; index < n; index++) {
+    const pivot = offset + index * step;
+    const row =
+      stmts.randomSingle.get(category, pivot) ??
+      stmts.randomSingle.get(category, 0);
+    if (!row) break;
+    results.push(toEntityRow(row as Record<string, SQLOutputValue>));
+  }
 
-  const rest = stmts.randomByCategory
-    .all(category, 0, n - first.length)
-    .map((row) => toEntityRow(row));
+  for (let index = results.length - 1; index > 0; index--) {
+    const swapIndex = Math.floor(Math.random() * (index + 1));
+    [results[index], results[swapIndex]] = [results[swapIndex], results[index]];
+  }
 
-  return shuffle([...first, ...rest]);
+  return results;
 }
 
 export function autocomplete(q: string, limit: number): EntityRow[] {
