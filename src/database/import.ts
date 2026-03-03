@@ -1,11 +1,12 @@
 import { createReadStream, existsSync } from 'node:fs';
 import { createInterface } from 'node:readline';
-import { DatabaseSync } from 'node:sqlite';
+import { DatabaseSync, type StatementSync } from 'node:sqlite';
 import { DB_PATH } from './connection.js';
 import { SCHEMA } from './schema.js';
 import type { Category } from './types.js';
 
 const BATCH_SIZE = 10_000;
+const LOG_INTERVAL = 500_000;
 
 interface NdjsonRecord {
   qid: string;
@@ -32,6 +33,42 @@ function extractTitle(wikipedia: string): string | undefined {
 function normalizeWikiUrl(wikipedia: string): string {
   const title = extractTitle(wikipedia);
   return title ? `https://en.wikipedia.org/wiki/${title}` : wikipedia;
+}
+
+function flushBatch(
+  database: DatabaseSync,
+  insert: StatementSync,
+  batch: NdjsonRecord[],
+  category: Category,
+  pageviews?: Map<string, number>
+): void {
+  database.exec('BEGIN');
+  for (const r of batch) {
+    const views =
+      r.wikipedia && pageviews
+        ? (pageviews.get(extractTitle(r.wikipedia) ?? '') ?? 0)
+        : 0;
+
+    /* eslint-disable unicorn/no-null -- SQLite requires null for NULL values */
+    const normalizedWiki = r.wikipedia
+      ? normalizeWikiUrl(r.wikipedia)
+      : null;
+
+    insert.run(
+      r.qid,
+      r.label,
+      r.description ?? null,
+      r.type ?? null,
+      category,
+      r.sitelinkCount,
+      views,
+      normalizedWiki,
+      r.wikidata ?? null,
+      Math.random()
+    );
+    /* eslint-enable unicorn/no-null */
+  }
+  database.exec('COMMIT');
 }
 
 export async function importData(
@@ -76,37 +113,11 @@ export async function importData(
     });
 
     const flush = () => {
-      database.exec('BEGIN');
-      for (const r of batch) {
-        const views =
-          r.wikipedia && pageviews
-            ? (pageviews.get(extractTitle(r.wikipedia) ?? '') ?? 0)
-            : 0;
-
-        /* eslint-disable unicorn/no-null -- SQLite requires null for NULL values */
-        const normalizedWiki = r.wikipedia
-          ? normalizeWikiUrl(r.wikipedia)
-          : null;
-
-        insert.run(
-          r.qid,
-          r.label,
-          r.description ?? null,
-          r.type ?? null,
-          category,
-          r.sitelinkCount,
-          views,
-          normalizedWiki,
-          r.wikidata ?? null,
-          Math.random()
-        );
-        /* eslint-enable unicorn/no-null */
-      }
-      database.exec('COMMIT');
+      flushBatch(database, insert, batch, category, pageviews);
       fileImported += batch.length;
       totalImported += batch.length;
       batch = [];
-      if (fileImported % 500_000 === 0) {
+      if (fileImported % LOG_INTERVAL === 0) {
         console.log(
           `  ${fileImported.toLocaleString()} imported from ${category}`
         );

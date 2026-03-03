@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 
 import { createWriteStream, existsSync, mkdirSync, rmSync } from 'node:fs';
-import { createInterface } from 'node:readline';
 import { execFileSync, spawn } from 'node:child_process';
-import { fileURLToPath } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
 import { downloadFile, fetchText } from './utils/download.js';
+import { createLineReader } from './utils/line-reader.js';
+import { createProgressCounter } from './utils/progress.js';
 
 const NDJSON_PATH = 'data/pageviews.ndjson';
 const TMP_DIR = 'data/pageviews-tmp';
@@ -13,6 +13,18 @@ const ACCUM_DB_PATH = 'data/pageviews-tmp/accumulator.db';
 const BATCH_SIZE = 10_000;
 const BASE_URL = 'https://dumps.wikimedia.org/other/pageview_complete/monthly';
 const DOWNLOAD_CONCURRENCY = 2;
+
+function filenameFromUrl(url: string): string {
+  return url.split('/').pop()!;
+}
+
+function cleanupTemporaryDirectory(): void {
+  try {
+    rmSync(TMP_DIR, { recursive: true });
+  } catch {
+    // Ignore — directory may already be gone
+  }
+}
 
 function ensureBzcat(): void {
   try {
@@ -63,17 +75,13 @@ function processBz2Stream(
       stdio: ['ignore', 'pipe', 'ignore'],
     });
 
-    const rl = createInterface({
-      input: child.stdout,
-      crlfDelay: Number.POSITIVE_INFINITY,
-    });
+    const rl = createLineReader(child.stdout);
 
     const upsert = database.prepare(`
       INSERT INTO pageviews (title, views) VALUES (?, ?)
       ON CONFLICT(title) DO UPDATE SET views = views + excluded.views
     `);
 
-    let lines = 0;
     let matched = 0;
     let batch: Array<[string, number]> = [];
 
@@ -86,13 +94,14 @@ function processBz2Stream(
       batch = [];
     };
 
+    const tick = createProgressCounter(10_000_000, (count) => {
+      console.log(
+        `  ${(count / 1_000_000).toFixed(0)}M lines, ${matched.toLocaleString()} matched`
+      );
+    });
+
     rl.on('line', (line: string) => {
-      lines++;
-      if (lines % 10_000_000 === 0) {
-        console.log(
-          `  ${(lines / 1_000_000).toFixed(0)}M lines, ${matched.toLocaleString()} matched`
-        );
-      }
+      tick();
 
       if (!line.startsWith('en.wikipedia ')) return;
 
@@ -111,7 +120,7 @@ function processBz2Stream(
     rl.on('close', () => {
       if (batch.length > 0) flush();
       console.log(
-        `  Processed ${(lines / 1_000_000).toFixed(1)}M lines, ${matched.toLocaleString()} matched.`
+        `  Done, ${matched.toLocaleString()} matched.`
       );
       resolve();
     });
@@ -176,71 +185,46 @@ function writeNdjson(database: DatabaseSync): void {
   console.log(`Done. Wrote ${NDJSON_PATH}`);
 }
 
-async function extract(): Promise<void> {
-  ensureBzcat();
-
-  const urls = await discoverDumpUrls();
-  mkdirSync(TMP_DIR, { recursive: true });
-
-  const database = openAccumulator();
-
-  // Handle --skip-until for bootstrapping resume state from a previous run
+function applySkipUntil(database: DatabaseSync, urls: string[]): void {
   const skipUntilIndex = process.argv.indexOf('--skip-until');
-  if (skipUntilIndex !== -1 && skipUntilIndex + 1 < process.argv.length) {
-    const skipUntil = process.argv[skipUntilIndex + 1];
-    const cutoff = urls.findIndex((url) => url.split('/').pop() === skipUntil);
-    if (cutoff === -1) {
-      console.error(
-        `Warning: --skip-until file "${skipUntil}" not found in dump list.`
-      );
-    } else {
-      for (let index = 0; index <= cutoff; index++) {
-        markCompleted(database, urls[index].split('/').pop()!);
-      }
-      console.log(
-        `Marked ${cutoff + 1} files as already processed (through ${skipUntil}).`
-      );
-    }
-  }
-
-  // Filter to remaining files
-  const completed = getCompletedFiles(database);
-  const remaining = urls.filter(
-    (url) => !completed.has(url.split('/').pop()!)
-  );
-
-  if (completed.size > 0) {
-    console.log(
-      `Resuming: ${completed.size} files already processed, ${remaining.length} remaining.`
-    );
-  }
-
-  if (remaining.length === 0) {
-    console.log('All files already processed.');
-    writeNdjson(database);
-    database.close();
-    try {
-      rmSync(TMP_DIR, { recursive: true });
-    } catch {
-      /* ignore */
-    }
-    console.log('\nExtraction complete.');
+  if (skipUntilIndex === -1 || skipUntilIndex + 1 >= process.argv.length) {
     return;
   }
 
-  // Pipeline: keep up to DOWNLOAD_CONCURRENCY downloads ahead of processing
+  const skipUntil = process.argv[skipUntilIndex + 1];
+  const cutoff = urls.findIndex((url) => filenameFromUrl(url) === skipUntil);
+  if (cutoff === -1) {
+    console.error(
+      `Warning: --skip-until file "${skipUntil}" not found in dump list.`
+    );
+    return;
+  }
+
+  for (let index = 0; index <= cutoff; index++) {
+    markCompleted(database, filenameFromUrl(urls[index]));
+  }
+  console.log(
+    `Marked ${cutoff + 1} files as already processed (through ${skipUntil}).`
+  );
+}
+
+async function processAllFiles(
+  remaining: string[],
+  database: DatabaseSync
+): Promise<void> {
   let nextIndex = 0;
   const downloads: Promise<{ filename: string; destination: string }>[] = [];
 
   const enqueueDownload = (url: string) => {
-    const filename = url.split('/').pop()!;
+    const filename = filenameFromUrl(url);
     const destination = `${TMP_DIR}/${filename}`;
     console.log(`Downloading: ${filename}`);
     const promise = downloadFile(url, destination).then(() => ({
       filename,
       destination,
     }));
-    promise.catch(() => {}); // Prevent unhandled rejection while queued
+    // Prevent unhandled-rejection warnings for promises that are awaited later
+    promise.catch(() => {});
     downloads.push(promise);
   };
 
@@ -271,24 +255,43 @@ async function extract(): Promise<void> {
       }
     }
   }
+}
+
+async function extract(): Promise<void> {
+  ensureBzcat();
+
+  const urls = await discoverDumpUrls();
+  mkdirSync(TMP_DIR, { recursive: true });
+
+  const database = openAccumulator();
+  applySkipUntil(database, urls);
+
+  const completed = getCompletedFiles(database);
+  const remaining = urls.filter(
+    (url) => !completed.has(filenameFromUrl(url))
+  );
+
+  if (completed.size > 0) {
+    console.log(
+      `Resuming: ${completed.size} files already processed, ${remaining.length} remaining.`
+    );
+  }
+
+  if (remaining.length === 0) {
+    console.log('All files already processed.');
+  } else {
+    await processAllFiles(remaining, database);
+  }
 
   writeNdjson(database);
   database.close();
-
-  try {
-    rmSync(TMP_DIR, { recursive: true });
-  } catch {
-    // ignore
-  }
-
+  cleanupTemporaryDirectory();
   console.log('\nExtraction complete.');
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  try {
-    await extract();
-  } catch (error) {
-    console.error('Fatal:', error);
-    process.exit(1);
-  }
+try {
+  await extract();
+} catch (error) {
+  console.error('Fatal:', error);
+  process.exit(1);
 }

@@ -2,11 +2,12 @@
 
 import { createReadStream, createWriteStream, mkdirSync } from 'node:fs';
 import { createGunzip } from 'node:zlib';
-import { createInterface } from 'node:readline';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { createLineReader } from './utils/line-reader.js';
+import { createProgressCounter } from './utils/progress.js';
 
 const DATA_DIR = 'data';
+const DUMP_PATH = 'latest-all.json.gz';
 
 const CLASSES: Record<string, { category: string; type: string | undefined }> =
   {
@@ -105,16 +106,18 @@ async function processDump(dumpPath: string) {
     apocryphal: createWriteStream(path.join(DATA_DIR, 'apocryphal.ndjson')),
   };
 
-  const rl = createInterface({
-    input: createReadStream(dumpPath).pipe(createGunzip()),
-    crlfDelay: Number.POSITIVE_INFINITY,
-  });
+  const rl = createLineReader(createReadStream(dumpPath).pipe(createGunzip()));
 
-  let processed = 0;
   let matched = 0;
   const matchCounts: Record<string, number> = Object.fromEntries(
     Object.keys(CLASSES).map((qid) => [qid, 0])
   );
+
+  const tick = createProgressCounter(1_000_000, (count) => {
+    console.log(
+      `  ${(count / 1_000_000).toFixed(0)}M processed, ${matched.toLocaleString()} matched`
+    );
+  });
 
   for await (const line of rl) {
     const trimmed = line.trim();
@@ -143,11 +146,7 @@ async function processDump(dumpPath: string) {
       }
     }
 
-    if (++processed % 1_000_000 === 0) {
-      console.log(
-        `  ${(processed / 1_000_000).toFixed(0)}M processed, ${matched.toLocaleString()} matched`
-      );
-    }
+    tick();
   }
 
   await Promise.all(
@@ -156,7 +155,7 @@ async function processDump(dumpPath: string) {
     )
   );
   console.log(
-    `\nDone. ${processed.toLocaleString()} entities processed, ${matched.toLocaleString()} matched.\n`
+    `\nDone. ${matched.toLocaleString()} matched.\n`
   );
 
   console.log('Per-QID breakdown:');
@@ -172,20 +171,9 @@ async function processDump(dumpPath: string) {
   }
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  const dumpPath = process.argv[2];
-
-  if (!dumpPath) {
-    console.error(
-      'Usage: tsx scripts/extract-wikidata.ts <path-to-dump.json.gz>'
-    );
-    process.exit(1);
-  }
-
-  try {
-    await processDump(dumpPath);
-  } catch (error) {
-    console.error('Fatal:', error);
-    process.exit(1);
-  }
+try {
+  await processDump(DUMP_PATH);
+} catch (error) {
+  console.error('Fatal:', error);
+  process.exit(1);
 }

@@ -4,7 +4,7 @@
 1. Fetch all "People"
     - Famous People
     - Fictional Characters
-    - Historial Figures
+    - Apocryphal Figures
 2. Fetch pageview numbers
 3. Sort into popularity based on pageviews
     - Very Famous
@@ -22,16 +22,16 @@
 ### 1. Extract entities from Wikidata
 1. Download https://dumps.wikimedia.org/wikidatawiki/entities/latest-all.json.gz (~12-16 hour download)
 2. Place `latest-all.json.gz` in the repository root
-3. `pnpm script:extract`
+3. `pnpm script:extract-wikidata`
     - extracts people into `data/{humans,fictional,apocryphal}.ndjson`
 
 ### 2. Extract pageview data
 Pageview counts come from Wikipedia's [monthly complete pageview dumps](https://dumps.wikimedia.org/other/pageview_complete/monthly/) (`pageviews-YYYYMM-user.bz2` files, ~5.5GB each).
-1. `pnpm script:pageviews` (takes ~30 hours? guessing, I started it at 12:40 PM on Sunday)
+1. `pnpm script:extract-pageviews` (takes ~30 hours? guessing, I started it at 12:40 PM on Sunday)
     - downloads all monthly dumps, processes them, writes `data/pageviews.ndjson`
 
 ### 3. Import into database
-1. `pnpm script:import`
+1. `pnpm script:build-database`
     - reads all NDJSON files, builds `data/people.db`
 
 

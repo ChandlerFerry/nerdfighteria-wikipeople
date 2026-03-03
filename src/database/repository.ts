@@ -117,7 +117,8 @@ export function autocomplete(q: string, limit: number): EntityRow[] {
     return stmts.autocomplete
       .all(ftsQuery, limit)
       .map((row) => toEntityRow(row));
-  } catch {
+  } catch (error) {
+    console.error('autocomplete query failed:', ftsQuery, error);
     return [];
   }
 }
@@ -144,7 +145,8 @@ export function search(
       : stmts.searchCount.get(ftsQuery);
 
     return { results, total: (countRow?.total as number) ?? 0, limit, offset };
-  } catch {
+  } catch (error) {
+    console.error('search query failed:', ftsQuery, error);
     return undefined;
   }
 }
