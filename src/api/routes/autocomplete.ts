@@ -19,7 +19,7 @@ const autocompleteRoute: FastifyPluginAsyncZod = async (fastify) => {
     async (request) => {
       const { q, limit } = request.query;
       return fastify.repo.autocomplete(q, limit);
-    }
+    },
   );
 };
 

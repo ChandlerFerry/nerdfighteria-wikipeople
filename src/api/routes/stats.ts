@@ -10,7 +10,7 @@ const statsRoute: FastifyPluginAsyncZod = async (fastify) => {
         description: 'Returns the number of entities in each category.',
       },
     },
-    async () => fastify.repo.categoryCounts
+    async () => fastify.repo.categoryCounts,
   );
 };
 

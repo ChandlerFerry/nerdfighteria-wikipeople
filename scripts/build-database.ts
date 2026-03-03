@@ -32,7 +32,7 @@ function extractTitle(wikipedia: string): string | undefined {
     const url = new URL(wikipedia);
     return decodeURIComponent(url.pathname.replace('/wiki/', '')).replaceAll(
       ' ',
-      '_'
+      '_',
     );
   } catch {
     return undefined;
@@ -90,9 +90,7 @@ async function buildDatabase(): Promise<void> {
     const rl = createLineReader(createReadStream(file));
 
     const tick = createProgressCounter(500_000, (count) => {
-      console.log(
-        `  ${count.toLocaleString()} imported from ${category}`
-      );
+      console.log(`  ${count.toLocaleString()} imported from ${category}`);
     });
 
     const flush = () => {
@@ -113,7 +111,7 @@ async function buildDatabase(): Promise<void> {
           views,
           r.wikipedia ? normalizeWikiUrl(r.wikipedia) : null,
           r.wikidata ?? null,
-          random()
+          random(),
         );
         /* eslint-enable unicorn/no-null */
       }
@@ -133,7 +131,7 @@ async function buildDatabase(): Promise<void> {
 
     if (batch.length > 0) flush();
     console.log(
-      `  Done: ${fileImported.toLocaleString()} records from ${category}`
+      `  Done: ${fileImported.toLocaleString()} records from ${category}`,
     );
   }
 
@@ -143,12 +141,12 @@ async function buildDatabase(): Promise<void> {
   database.close();
 
   console.log(
-    `Import complete: ${totalImported.toLocaleString()} total records`
+    `Import complete: ${totalImported.toLocaleString()} total records`,
   );
 }
 
 const missing = [...SOURCES.map((s) => s.file), PAGEVIEWS_PATH].filter(
-  (f) => !existsSync(f)
+  (f) => !existsSync(f),
 );
 if (missing.length > 0) {
   console.error('Missing required data files:');

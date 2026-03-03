@@ -117,7 +117,7 @@ export function autocomplete(q: string, limit: number): EntityRow[] {
 }
 
 export function search(
-  parameters: SearchParameters
+  parameters: SearchParameters,
 ): SearchResponse | undefined {
   const ftsQuery = buildFtsQuery(parameters.q);
   if (!ftsQuery) return undefined;

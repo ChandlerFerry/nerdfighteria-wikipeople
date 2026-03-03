@@ -54,7 +54,9 @@ function openAccumulator(): DatabaseSync {
 }
 
 function getCompletedFiles(database: DatabaseSync): Set<string> {
-  const rows = database.prepare('SELECT filename FROM completed_files').all() as Array<{
+  const rows = database
+    .prepare('SELECT filename FROM completed_files')
+    .all() as Array<{
     filename: string;
   }>;
   return new Set(rows.map((r) => r.filename));
@@ -68,7 +70,7 @@ function markCompleted(database: DatabaseSync, filename: string): void {
 
 function processBz2Stream(
   filePath: string,
-  database: DatabaseSync
+  database: DatabaseSync,
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     const child = spawn('bzcat', [filePath], {
@@ -96,7 +98,7 @@ function processBz2Stream(
 
     const tick = createProgressCounter(10_000_000, (count) => {
       console.log(
-        `  ${(count / 1_000_000).toFixed(0)}M lines, ${matched.toLocaleString()} matched`
+        `  ${(count / 1_000_000).toFixed(0)}M lines, ${matched.toLocaleString()} matched`,
       );
     });
 
@@ -119,9 +121,7 @@ function processBz2Stream(
 
     rl.on('close', () => {
       if (batch.length > 0) flush();
-      console.log(
-        `  Done, ${matched.toLocaleString()} matched.`
-      );
+      console.log(`  Done, ${matched.toLocaleString()} matched.`);
       resolve();
     });
 
@@ -195,7 +195,7 @@ function applySkipUntil(database: DatabaseSync, urls: string[]): void {
   const cutoff = urls.findIndex((url) => filenameFromUrl(url) === skipUntil);
   if (cutoff === -1) {
     console.error(
-      `Warning: --skip-until file "${skipUntil}" not found in dump list.`
+      `Warning: --skip-until file "${skipUntil}" not found in dump list.`,
     );
     return;
   }
@@ -204,13 +204,13 @@ function applySkipUntil(database: DatabaseSync, urls: string[]): void {
     markCompleted(database, filenameFromUrl(urls[index]));
   }
   console.log(
-    `Marked ${cutoff + 1} files as already processed (through ${skipUntil}).`
+    `Marked ${cutoff + 1} files as already processed (through ${skipUntil}).`,
   );
 }
 
 async function processAllFiles(
   remaining: string[],
-  database: DatabaseSync
+  database: DatabaseSync,
 ): Promise<void> {
   let nextIndex = 0;
   const downloads: Promise<{ filename: string; destination: string }>[] = [];
@@ -267,13 +267,11 @@ async function extract(): Promise<void> {
   applySkipUntil(database, urls);
 
   const completed = getCompletedFiles(database);
-  const remaining = urls.filter(
-    (url) => !completed.has(filenameFromUrl(url))
-  );
+  const remaining = urls.filter((url) => !completed.has(filenameFromUrl(url)));
 
   if (completed.size > 0) {
     console.log(
-      `Resuming: ${completed.size} files already processed, ${remaining.length} remaining.`
+      `Resuming: ${completed.size} files already processed, ${remaining.length} remaining.`,
     );
   }
 

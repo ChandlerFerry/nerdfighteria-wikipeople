@@ -53,7 +53,7 @@ describe('database validation', () => {
       .prepare(
         `SELECT COUNT(*) AS count FROM entities
          WHERE qid IS NULL OR qid = ''
-            OR label IS NULL OR label = ''`
+            OR label IS NULL OR label = ''`,
       )
       .get() as { count: number };
     expect(missing.count).toBe(0);
@@ -82,9 +82,7 @@ describe('database validation', () => {
 
   it('no entity has an empty label', () => {
     const empty = database
-      .prepare(
-        `SELECT COUNT(*) AS count FROM entities WHERE TRIM(label) = ''`
-      )
+      .prepare(`SELECT COUNT(*) AS count FROM entities WHERE TRIM(label) = ''`)
       .get() as { count: number };
     expect(empty.count).toBe(0);
   });

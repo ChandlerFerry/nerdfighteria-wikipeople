@@ -9,7 +9,7 @@ export async function fetchText(url: string): Promise<string> {
 
 export async function downloadFile(
   url: string,
-  destination: string
+  destination: string,
 ): Promise<void> {
   const response = await fetch(url);
   if (!response.ok || !response.body)

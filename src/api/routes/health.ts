@@ -7,7 +7,7 @@ const healthRoute: FastifyPluginAsyncZod = async (fastify) => {
     async () => ({
       status: 'ok',
       timestamp: new Date().toISOString(),
-    })
+    }),
   );
 };
 

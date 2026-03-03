@@ -1,6 +1,6 @@
 export function createProgressCounter(
   interval: number,
-  onTick: (count: number) => void
+  onTick: (count: number) => void,
 ): () => void {
   let count = 0;
   return () => {

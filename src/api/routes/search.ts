@@ -27,7 +27,7 @@ const searchRoute: FastifyPluginAsyncZod = async (fastify) => {
           .send({ error: 'Query produced no valid tokens after sanitization' });
       }
       return result;
-    }
+    },
   );
 };
 

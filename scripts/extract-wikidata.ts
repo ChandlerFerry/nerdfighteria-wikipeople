@@ -96,13 +96,21 @@ interface Result {
   wikidata: string;
 }
 
-function matchClass(
-  entity: Entity
-):
-  | { qid: string; category: string; type: string | undefined; priority: number }
+function matchClass(entity: Entity):
+  | {
+      qid: string;
+      category: string;
+      type: string | undefined;
+      priority: number;
+    }
   | undefined {
   let best:
-    | { qid: string; category: string; type: string | undefined; priority: number }
+    | {
+        qid: string;
+        category: string;
+        type: string | undefined;
+        priority: number;
+      }
     | undefined;
   for (const claim of entity.claims?.P31 ?? []) {
     if (claim.rank === 'deprecated' || claim.mainsnak.snaktype !== 'value')
@@ -120,7 +128,7 @@ function matchClass(
 
 function toResult(
   entity: Entity,
-  type: string | undefined
+  type: string | undefined,
 ): Result | undefined {
   const label = entity.labels?.en?.value;
   if (!label) return undefined;
@@ -151,12 +159,12 @@ async function processDump() {
 
   let matched = 0;
   const matchCounts: Record<string, number> = Object.fromEntries(
-    Object.keys(CLASSES).map((qid) => [qid, 0])
+    Object.keys(CLASSES).map((qid) => [qid, 0]),
   );
 
   const tick = createProgressCounter(1_000_000, (count) => {
     console.log(
-      `  ${(count / 1_000_000).toFixed(0)}M processed, ${matched.toLocaleString()} matched`
+      `  ${(count / 1_000_000).toFixed(0)}M processed, ${matched.toLocaleString()} matched`,
     );
   });
 
@@ -167,7 +175,7 @@ async function processDump() {
     let entity: Entity;
     try {
       entity = JSON.parse(
-        trimmed.endsWith(',') ? trimmed.slice(0, -1) : trimmed
+        trimmed.endsWith(',') ? trimmed.slice(0, -1) : trimmed,
       ) as Entity;
     } catch {
       continue;
@@ -179,7 +187,7 @@ async function processDump() {
         const result = toResult(entity, match.type);
         if (result) {
           out[match.category as keyof typeof out].write(
-            JSON.stringify(result) + '\n'
+            JSON.stringify(result) + '\n',
           );
           matched++;
           matchCounts[match.qid]++;
@@ -192,22 +200,20 @@ async function processDump() {
 
   await Promise.all(
     Object.values(out).map(
-      (s) => new Promise<void>((resolve) => s.end(resolve))
-    )
+      (s) => new Promise<void>((resolve) => s.end(resolve)),
+    ),
   );
-  console.log(
-    `\nDone. ${matched.toLocaleString()} matched.\n`
-  );
+  console.log(`\nDone. ${matched.toLocaleString()} matched.\n`);
 
   console.log('Per-QID breakdown:');
   const maxLabel = Math.max(
-    ...Object.values(CLASSES).map((c) => (c.type ?? c.category).length)
+    ...Object.values(CLASSES).map((c) => (c.type ?? c.category).length),
   );
   for (const [qid, cls] of Object.entries(CLASSES)) {
     const count = matchCounts[qid];
     const label = (cls.type ?? cls.category).padEnd(maxLabel);
     console.log(
-      `  ${qid.padEnd(12)} ${label}  ${count.toLocaleString()}${count === 0 ? '  ← no hits' : ''}`
+      `  ${qid.padEnd(12)} ${label}  ${count.toLocaleString()}${count === 0 ? '  ← no hits' : ''}`,
     );
   }
 }

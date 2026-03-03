@@ -22,7 +22,7 @@ const randomRoute: FastifyPluginAsyncZod = async (fastify) => {
         fictional: fastify.repo.getRandom('fictional', n),
         apocryphal: fastify.repo.getRandom('apocryphal', n),
       };
-    }
+    },
   );
 };
 
