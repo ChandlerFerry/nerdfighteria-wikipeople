@@ -97,7 +97,7 @@ function toResult(
   };
 }
 
-async function processDump(dumpPath: string) {
+async function processDump() {
   mkdirSync(DATA_DIR, { recursive: true });
 
   const out = {
@@ -106,7 +106,7 @@ async function processDump(dumpPath: string) {
     apocryphal: createWriteStream(path.join(DATA_DIR, 'apocryphal.ndjson')),
   };
 
-  const rl = createLineReader(createReadStream(dumpPath).pipe(createGunzip()));
+  const rl = createLineReader(createReadStream(DUMP_PATH).pipe(createGunzip()));
 
   let matched = 0;
   const matchCounts: Record<string, number> = Object.fromEntries(
@@ -172,7 +172,7 @@ async function processDump(dumpPath: string) {
 }
 
 try {
-  await processDump(DUMP_PATH);
+  await processDump();
 } catch (error) {
   console.error('Fatal:', error);
   process.exit(1);
