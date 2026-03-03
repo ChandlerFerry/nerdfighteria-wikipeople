@@ -29,7 +29,7 @@ declare module 'fastify' {
       getRandom: typeof getRandom;
       autocomplete: typeof autocomplete;
       search: typeof search;
-      getCategoryCounts: typeof getCategoryCounts;
+      categoryCounts: Record<string, number>;
     };
   }
 }
@@ -59,7 +59,8 @@ export async function createServer(): Promise<FastifyInstance> {
 
   await fastify.register(swaggerUi, { routePrefix: '/documentation' });
 
-  fastify.decorate('repo', { getRandom, autocomplete, search, getCategoryCounts });
+  const categoryCounts = getCategoryCounts();
+  fastify.decorate('repo', { getRandom, autocomplete, search, categoryCounts });
   fastify.addHook('onClose', async () => database.close());
 
   await fastify.register(cors, { origin: true, methods: ['GET'] });
