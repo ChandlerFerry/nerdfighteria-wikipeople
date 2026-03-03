@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nerdfighteria Wikipeople API</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <nav class="site-nav">
+    <a href="index.html" class="brand">Nerdfighteria - Wikipeople</a>
+    <a href="index.html" class="active">Demo</a>
+    <a href="api.html">API Docs</a>
+    <a href="https://github.com/chandlerferry/nerdfighteria-wikipeople" target="_blank" rel="noopener" class="nav-ext">GitHub ↗</a>
+  </nav>
+
+  <main>
+    <!-- Search -->
+    <section class="search-section">
+      <div class="search-bar">
+        <div class="autocomplete-wrapper">
+          <input type="text" id="search-input" placeholder="Try &ldquo;einstein&rdquo; or &ldquo;sherlock&rdquo;&hellip;" autocomplete="off">
+          <div id="autocomplete-dropdown" class="autocomplete-dropdown"></div>
+        </div>
+        <select id="category-select">
+          <option value="">All categories</option>
+          <option value="humans">Humans</option>
+          <option value="fictional">Fictional</option>
+          <option value="apocryphal">Apocryphal</option>
+        </select>
+        <button id="search-btn">Search</button>
+      </div>
+    </section>
+
+    <!-- Search results -->
+    <section id="results-section" class="results-section" style="display:none">
+      <div class="results-header">
+        <h2>Results</h2>
+        <span id="results-info" class="results-info"></span>
+      </div>
+      <div id="results-grid" class="results-grid"></div>
+      <div class="pagination">
+        <button id="prev-btn" disabled>Previous</button>
+        <button id="next-btn" disabled>Next</button>
+      </div>
+    </section>
+
+    <!-- Random browse -->
+    <section class="random-section">
+      <div class="random-header">
+        <h2>Random people</h2>
+        <button id="shuffle-btn" class="shuffle-btn">Shuffle</button>
+      </div>
+      <div id="random-grid" class="random-grid"></div>
+    </section>
+  </main>
+
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

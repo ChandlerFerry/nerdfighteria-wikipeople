@@ -43,10 +43,10 @@ export async function createServer(): Promise<FastifyInstance> {
   await fastify.register(swagger, {
     openapi: {
       info: {
-        title: 'Famous People API',
+        title: 'Nerdfighteria Wikipeople API',
         description:
-          'Search, autocomplete, and browse 11.6 million people from Wikidata - real humans, apocryphal figures, and fictional characters.\n\n**Rate limiting:** 100 requests / minute per IP on all endpoints except `/health`.',
-        version: '1.0.0',
+          'Search & Autocomplete people from Wikidata - real humans, apocryphal figures, and fictional characters.\n\n**Rate limiting:** 100 requests / minute per IP on all endpoints except `/health`.',
+        version: '0.0.1',
       },
       tags: [
         { name: 'Search', description: 'Find people by name' },

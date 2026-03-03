@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nerdfighteria Wikipeople API - Docs</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css">
+  <style>
+    /* Override Swagger UI background to match dark theme */
+    #swagger-ui .swagger-ui { background: #0d0d1a; }
+    #swagger-ui .swagger-ui .info { margin: 40px 0 20px; }
+    #swagger-ui .topbar { display: none; }
+  </style>
+</head>
+<body>
+  <nav class="site-nav">
+    <a href="index.html" class="brand">Nerdfighteria - Wikipeople</a>
+    <a href="index.html">Demo</a>
+    <a href="api.html" class="active">API Docs</a>
+    <a href="https://github.com/chandlerferry/nerdfighteria-wikipeople" target="_blank" rel="noopener" class="nav-ext">GitHub ↗</a>
+  </nav>
+
+  <div id="swagger-ui"></div>
+
+  <script src="config.js"></script>
+  <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+  <script>
+    SwaggerUIBundle({
+      url: CONFIG.API_URL + "/documentation/json",
+      dom_id: "#swagger-ui",
+      presets: [SwaggerUIBundle.presets.apis, SwaggerUIBundle.SwaggerUIStandalonePreset],
+      layout: "BaseLayout",
+      deepLinking: true,
+      tryItOutEnabled: true,
+      defaultModelsExpandDepth: 1,
+      defaultModelExpandDepth: 2,
+    });
+  </script>
+</body>
+</html>
