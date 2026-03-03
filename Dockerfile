@@ -17,7 +17,6 @@ WORKDIR /app
 COPY --from=build /app/dist ./dist
 COPY --from=deps  /app/node_modules ./node_modules
 COPY package.json ./
-COPY data/people.db ./data/people.db
 ENV NODE_ENV=production PORT=8080
 EXPOSE 8080
 CMD ["node", "dist/index.js", "serve"]

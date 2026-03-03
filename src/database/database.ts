@@ -58,7 +58,7 @@ END;
 CREATE INDEX IF NOT EXISTS idx_entities_rand ON entities(category, rand);
 `;
 
-export const DB_PATH = 'data/people.db';
+export const DB_PATH = process.env.DB_PATH ?? 'data/people.db';
 
 export const database = new DatabaseSync(DB_PATH);
 database.exec(`
