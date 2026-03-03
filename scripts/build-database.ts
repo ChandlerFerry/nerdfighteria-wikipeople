@@ -2,9 +2,7 @@
 
 import { createReadStream, existsSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
-import { DB_PATH } from '../src/database/connection.js';
-import { SCHEMA } from '../src/database/schema.js';
-import type { Category } from '../src/database/types.js';
+import { DB_PATH, SCHEMA, type Category } from '../src/database/database.js';
 import { createLineReader } from './utils/line-reader.js';
 import { createProgressCounter } from './utils/progress.js';
 

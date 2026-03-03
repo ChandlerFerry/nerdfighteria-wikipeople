@@ -1,3 +1,34 @@
+import { DatabaseSync } from 'node:sqlite';
+
+export const CATEGORIES = ['humans', 'fictional', 'apocryphal'] as const;
+export type Category = (typeof CATEGORIES)[number];
+
+export interface EntityRow {
+  qid: string;
+  label: string;
+  description: string | null;
+  type: string | null;
+  category: string;
+  sitelink_count: number;
+  pageviews: number;
+  wikipedia: string | null;
+  wikidata: string;
+}
+
+export interface SearchParameters {
+  q: string;
+  category?: Category;
+  limit: number;
+  offset: number;
+}
+
+export interface SearchResponse {
+  results: EntityRow[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
 export const SCHEMA = `
 CREATE TABLE IF NOT EXISTS entities (
   rowid          INTEGER PRIMARY KEY,
@@ -24,6 +55,14 @@ CREATE TRIGGER IF NOT EXISTS entities_ai AFTER INSERT ON entities BEGIN
   VALUES (new.rowid, new.label, new.description);
 END;
 
-CREATE INDEX IF NOT EXISTS idx_entities_category ON entities(category);
 CREATE INDEX IF NOT EXISTS idx_entities_rand ON entities(category, rand);
 `;
+
+export const DB_PATH = 'data/people.db';
+
+export const database = new DatabaseSync(DB_PATH);
+database.exec(`
+  PRAGMA journal_mode=WAL;
+  PRAGMA cache_size=-131072;
+  PRAGMA temp_store=MEMORY;
+`);

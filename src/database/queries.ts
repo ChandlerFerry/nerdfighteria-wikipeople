@@ -1,11 +1,11 @@
 import type { SQLOutputValue } from 'node:sqlite';
-import { openDatabase } from './connection.js';
-import type {
-  Category,
-  EntityRow,
-  SearchParameters,
-  SearchResponse,
-} from './types.js';
+import {
+  database,
+  type Category,
+  type EntityRow,
+  type SearchParameters,
+  type SearchResponse,
+} from './database.js';
 
 function buildFtsQuery(raw: string): string | undefined {
   const tokens = raw.split(/[^\p{L}\p{N}]+/u).filter((t) => t.length > 0);
@@ -35,20 +35,11 @@ function shuffle<T>(array: T[]): T[] {
   return array;
 }
 
-const database = openDatabase();
-
 const stmts = {
   randomByCategory: database.prepare(`
     SELECT qid, label, description, type, category, sitelink_count, pageviews, wikipedia, wikidata
     FROM entities
     WHERE category = ? AND rand >= ?
-    ORDER BY rand
-    LIMIT ?
-  `),
-  randomByCategoryFrom0: database.prepare(`
-    SELECT qid, label, description, type, category, sitelink_count, pageviews, wikipedia, wikidata
-    FROM entities
-    WHERE category = ? AND rand >= 0
     ORDER BY rand
     LIMIT ?
   `),
@@ -103,8 +94,8 @@ export function getRandom(category: Category, n: number): EntityRow[] {
 
   if (first.length >= n) return shuffle(first);
 
-  const rest = stmts.randomByCategoryFrom0
-    .all(category, n - first.length)
+  const rest = stmts.randomByCategory
+    .all(category, 0, n - first.length)
     .map((row) => toEntityRow(row));
 
   return shuffle([...first, ...rest]);
@@ -158,8 +149,4 @@ export function getCategoryCounts(): Record<string, number> {
     counts[row.category as string] = row.count as number;
   }
   return counts;
-}
-
-export function close(): void {
-  database.close();
 }

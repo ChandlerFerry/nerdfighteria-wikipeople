@@ -15,8 +15,8 @@ import {
   autocomplete,
   search,
   getCategoryCounts,
-  close,
-} from './database/repository.js';
+} from './database/queries.js';
+import { database } from './database/database.js';
 import healthRoute from './api/routes/health.js';
 import randomRoute from './api/routes/random.js';
 import autocompleteRoute from './api/routes/autocomplete.js';
@@ -60,7 +60,7 @@ export async function createServer(): Promise<FastifyInstance> {
   await fastify.register(swaggerUi, { routePrefix: '/documentation' });
 
   fastify.decorate('repo', { getRandom, autocomplete, search, getCategoryCounts });
-  fastify.addHook('onClose', async () => close());
+  fastify.addHook('onClose', async () => database.close());
 
   await fastify.register(cors, { origin: true, methods: ['GET'] });
 
