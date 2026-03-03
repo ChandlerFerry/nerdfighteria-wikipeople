@@ -7,6 +7,6 @@ export default tseslint.config(
   ...tseslint.configs.recommended,
   unicorn.configs['recommended'],
   {
-    ignores: ['dist/', 'docs/'],
+    ignores: ['dist/', 'docs/', 'example/'],
   }
 );
