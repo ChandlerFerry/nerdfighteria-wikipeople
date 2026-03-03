@@ -6,10 +6,10 @@
   "scripts": {
     "build": "tsc",
     "script:extract-wikidata": "tsx scripts/extract-wikidata.ts latest-all.json.gz",
-    "script:extract-wikipedia": "tsx scripts/jank-extract-wikipedia.ts enwiki-latest-page.sql.gz enwiki-latest-categorylinks.sql.gz enwiki-latest-linktarget.sql.gz enwiki-latest-redirect.sql.gz",
     "script:extract-pageviews": "tsx scripts/extract-pageviews.ts",
     "script:build-database": "tsx scripts/build-database.ts",
     "serve": "node dist/index.js",
+    "serve:docs": "npx -y serve docs",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix"
   },

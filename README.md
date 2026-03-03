@@ -23,7 +23,7 @@
 1. Download https://dumps.wikimedia.org/wikidatawiki/entities/latest-all.json.gz (~12-16 hour download)
 2. Place `latest-all.json.gz` in the repository root
 3. `pnpm script:extract`
-    - extracts people into `data/{humans,fictional,historical}.ndjson`
+    - extracts people into `data/{humans,fictional,apocryphal}.ndjson`
 
 ### 2. Extract pageview data
 Pageview counts come from Wikipedia's [monthly complete pageview dumps](https://dumps.wikimedia.org/other/pageview_complete/monthly/) (`pageviews-YYYYMM-user.bz2` files, ~5.5GB each).
@@ -67,4 +67,4 @@ There's a known issue where we don't find fictional characters like [Hazel Grace
 | [Q13002315](https://www.wikidata.org/wiki/Q13002315) | fictional | legendary figure | 447 |
 | [Q108065012](https://www.wikidata.org/wiki/Q108065012) | fictional | radio character | 20 |
 | [Q25810847](https://www.wikidata.org/wiki/Q25810847) | fictional | folklore character | 172 |
-| [Q21070568](https://www.wikidata.org/wiki/Q21070568) | historical | - | 864 |
+| [Q21070568](https://www.wikidata.org/wiki/Q21070568) | apocryphal | - | 864 |
