@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { createWriteStream, existsSync, mkdirSync, rmSync } from 'node:fs';
+import { createReadStream, createWriteStream, existsSync, mkdirSync, rmSync } from 'node:fs';
 import { execFileSync, spawn } from 'node:child_process';
 import { DatabaseSync } from 'node:sqlite';
 import { downloadFile, fetchText } from './utils/download.js';
@@ -8,11 +8,17 @@ import { createLineReader } from './utils/line-reader.js';
 import { createProgressCounter } from './utils/progress.js';
 
 const NDJSON_PATH = 'data/pageviews.ndjson';
+const SEED_NDJSON_PATH = 'data/pageviews-seed.ndjson';
 const TMP_DIR = 'data/pageviews-tmp';
 const ACCUM_DB_PATH = 'data/pageviews-tmp/accumulator.db';
 const BATCH_SIZE = 10_000;
 const BASE_URL = 'https://dumps.wikimedia.org/other/pageview_complete/monthly';
 const DOWNLOAD_CONCURRENCY = 2;
+const SOURCE_FILES = [
+  'data/humans.ndjson',
+  'data/fictional.ndjson',
+  'data/apocryphal.ndjson',
+];
 
 function filenameFromUrl(url: string): string {
   return url.split('/').pop()!;
@@ -33,6 +39,43 @@ function ensureBzcat(): void {
     console.error('Error: bzcat is required but not found. Install bzip2.');
     process.exit(1);
   }
+}
+
+function extractWikiTitle(wikipedia: string): string | undefined {
+  try {
+    const url = new URL(wikipedia);
+    return decodeURIComponent(url.pathname.replace('/wiki/', '')).replaceAll(
+      ' ',
+      '_',
+    );
+  } catch {
+    return undefined;
+  }
+}
+
+async function loadKnownTitles(): Promise<Set<string>> {
+  const titles = new Set<string>();
+  for (const file of SOURCE_FILES) {
+    if (!existsSync(file)) {
+      console.log(`  Skipping ${file} (not found)`);
+      continue;
+    }
+    const rl = createLineReader(createReadStream(file));
+    for await (const line of rl) {
+      if (!line.trim()) continue;
+      const { wikipedia } = JSON.parse(line) as {
+        wikipedia?: string | null;
+      };
+      if (wikipedia) {
+        const title = extractWikiTitle(wikipedia);
+        if (title) titles.add(title);
+      }
+    }
+  }
+  console.log(
+    `Loaded ${titles.size.toLocaleString()} known Wikipedia titles from source files.`,
+  );
+  return titles;
 }
 
 function openAccumulator(): DatabaseSync {
@@ -71,6 +114,7 @@ function markCompleted(database: DatabaseSync, filename: string): void {
 function processBz2Stream(
   filePath: string,
   database: DatabaseSync,
+  knownTitles: Set<string>,
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     const child = spawn('bzcat', [filePath], {
@@ -111,6 +155,8 @@ function processBz2Stream(
       if (fields.length < 4) return;
 
       const title = fields[1];
+      if (!knownTitles.has(title)) return;
+
       const dailyTotal = Number.parseInt(fields.at(-2)!, 10);
       if (Number.isNaN(dailyTotal) || dailyTotal <= 0) return;
 
@@ -185,6 +231,82 @@ function writeNdjson(database: DatabaseSync): void {
   console.log(`Done. Wrote ${NDJSON_PATH}`);
 }
 
+function writeNdjsonFiltered(
+  database: DatabaseSync,
+  knownTitles: Set<string>,
+): void {
+  console.log(
+    `Filtering accumulator against ${knownTitles.size.toLocaleString()} known titles...`,
+  );
+
+  // Load known titles into a temp table so SQLite can use indexed lookups
+  // instead of a full 212GB table scan.
+  database.exec(
+    'CREATE TEMP TABLE IF NOT EXISTS known_titles (title TEXT PRIMARY KEY)',
+  );
+  const insertKnown = database.prepare(
+    'INSERT OR IGNORE INTO known_titles (title) VALUES (?)',
+  );
+
+  const titleArray = [...knownTitles];
+  for (let i = 0; i < titleArray.length; i += BATCH_SIZE) {
+    database.exec('BEGIN');
+    for (const title of titleArray.slice(i, i + BATCH_SIZE)) {
+      insertKnown.run(title);
+    }
+    database.exec('COMMIT');
+  }
+
+  console.log(`Writing filtered entries to ${NDJSON_PATH}...`);
+  mkdirSync('data', { recursive: true });
+  const out = createWriteStream(NDJSON_PATH);
+  const rows = database
+    .prepare(
+      'SELECT p.title, p.views FROM pageviews p WHERE p.title IN (SELECT title FROM known_titles)',
+    )
+    .all() as Array<{ title: string; views: number }>;
+
+  for (const row of rows) {
+    out.write(JSON.stringify(row) + '\n');
+  }
+
+  out.end();
+  console.log(`Done. Wrote ${rows.length.toLocaleString()} entries to ${NDJSON_PATH}`);
+}
+
+async function seedFromNdjson(database: DatabaseSync): Promise<void> {
+  if (!existsSync(SEED_NDJSON_PATH)) return;
+
+  console.log(`Seeding accumulator from ${SEED_NDJSON_PATH}...`);
+  const upsert = database.prepare(`
+    INSERT INTO pageviews (title, views) VALUES (?, ?)
+    ON CONFLICT(title) DO UPDATE SET views = views + excluded.views
+  `);
+
+  const rl = createLineReader(createReadStream(SEED_NDJSON_PATH));
+  let count = 0;
+  let batch: Array<{ title: string; views: number }> = [];
+
+  const flush = () => {
+    database.exec('BEGIN');
+    for (const { title, views } of batch) {
+      upsert.run(title, views);
+    }
+    database.exec('COMMIT');
+    count += batch.length;
+    batch = [];
+  };
+
+  for await (const line of rl) {
+    if (!line.trim()) continue;
+    batch.push(JSON.parse(line) as { title: string; views: number });
+    if (batch.length >= BATCH_SIZE) flush();
+  }
+  if (batch.length > 0) flush();
+
+  console.log(`Seeded ${count.toLocaleString()} entries from existing NDJSON.`);
+}
+
 function applySkipUntil(database: DatabaseSync, urls: string[]): void {
   const skipUntilIndex = process.argv.indexOf('--skip-until');
   if (skipUntilIndex === -1 || skipUntilIndex + 1 >= process.argv.length) {
@@ -211,6 +333,7 @@ function applySkipUntil(database: DatabaseSync, urls: string[]): void {
 async function processAllFiles(
   remaining: string[],
   database: DatabaseSync,
+  knownTitles: Set<string>,
 ): Promise<void> {
   let nextIndex = 0;
   const downloads: Promise<{ filename: string; destination: string }>[] = [];
@@ -246,7 +369,7 @@ async function processAllFiles(
 
     try {
       console.log(`Processing: ${filename}`);
-      await processBz2Stream(destination, database);
+      await processBz2Stream(destination, database, knownTitles);
       markCompleted(database, filename);
     } finally {
       if (existsSync(destination)) {
@@ -258,12 +381,33 @@ async function processAllFiles(
 }
 
 async function extract(): Promise<void> {
+  if (process.argv.includes('--export-only')) {
+    console.log('Loading source files to build title filter...');
+    const knownTitles = await loadKnownTitles();
+    const database = openAccumulator();
+    writeNdjsonFiltered(database, knownTitles);
+    database.close();
+    console.log('\nExport complete.');
+    return;
+  }
+
   ensureBzcat();
+
+  console.log('Loading source files to build title filter...');
+  const knownTitles = await loadKnownTitles();
+
+  if (knownTitles.size === 0) {
+    console.error(
+      'No known titles found. Run extract-wikidata.ts first to generate source NDJSON files.',
+    );
+    process.exit(1);
+  }
 
   const urls = await discoverDumpUrls();
   mkdirSync(TMP_DIR, { recursive: true });
 
   const database = openAccumulator();
+  await seedFromNdjson(database);
   applySkipUntil(database, urls);
 
   const completed = getCompletedFiles(database);
@@ -278,7 +422,7 @@ async function extract(): Promise<void> {
   if (remaining.length === 0) {
     console.log('All files already processed.');
   } else {
-    await processAllFiles(remaining, database);
+    await processAllFiles(remaining, database, knownTitles);
   }
 
   writeNdjson(database);

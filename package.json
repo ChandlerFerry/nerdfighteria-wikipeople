@@ -9,7 +9,7 @@
     "script:extract-pageviews": "tsx scripts/extract-pageviews.ts",
     "script:build-database": "tsx scripts/build-database.ts",
     "serve": "node dist/index.js",
-    "serve:docs": "npx -y serve docs",
+    "serve:example": "npx -y serve example",
     "test": "vitest run",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix"

@@ -42,7 +42,7 @@ function renderCard(entity) {
     <div class="card-meta">
       <span class="badge badge-${esc(entity.category)}">${esc(entity.category)}</span>
       <span class="sitelinks">${entity.sitelink_count} sitelinks</span>
-      ${entity.pageviews ? `<span class="pageviews">${entity.pageviews.toLocaleString()} views</span>` : ""}
+      ${entity.pageviews ? `<span class="pageviews">${entity.pageviews.toLocaleString()} views (2012-2015, WIP)</span>` : ""}
       <span class="card-links">${links.join(" ")}</span>
     </div>
   </div>`;
