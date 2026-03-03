@@ -53,25 +53,15 @@ export async function importData(
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
-  const sources: Array<{ file: string; category: Category; dedup?: boolean }> =
-    [
-      { file: 'data/humans.ndjson', category: 'humans' },
-      { file: 'data/fictional.ndjson', category: 'fictional' },
-      { file: 'data/apocryphal.ndjson', category: 'apocryphal' },
-      {
-        file: 'data/fictional_wikipedia.ndjson',
-        category: 'fictional_wikipedia',
-        dedup: true,
-      },
-    ];
-
-  const dedupStmt = database.prepare(
-    'SELECT 1 FROM entities WHERE wikipedia = ? LIMIT 1'
-  );
+  const sources: Array<{ file: string; category: Category }> = [
+    { file: 'data/humans.ndjson', category: 'humans' },
+    { file: 'data/fictional.ndjson', category: 'fictional' },
+    { file: 'data/apocryphal.ndjson', category: 'apocryphal' },
+  ];
 
   let totalImported = 0;
 
-  for (const { file, category, dedup } of sources) {
+  for (const { file, category } of sources) {
     if (!existsSync(file)) {
       console.log(`Skipping ${file} (not found)`);
       continue;
@@ -80,8 +70,6 @@ export async function importData(
     console.log(`Importing ${file}...`);
     let batch: NdjsonRecord[] = [];
     let fileImported = 0;
-    let dedupSkipped = 0;
-
     const rl = createInterface({
       input: createReadStream(file),
       crlfDelay: Number.POSITIVE_INFINITY,
@@ -128,25 +116,13 @@ export async function importData(
     for await (const line of rl) {
       if (!line.trim()) continue;
       const record = JSON.parse(line) as NdjsonRecord;
-      if (
-        dedup &&
-        record.wikipedia &&
-        dedupStmt.get(normalizeWikiUrl(record.wikipedia))
-      ) {
-        dedupSkipped++;
-        continue;
-      }
       batch.push(record);
       if (batch.length >= BATCH_SIZE) flush();
     }
 
     if (batch.length > 0) flush();
-    const skipNote =
-      dedupSkipped > 0
-        ? `, ${dedupSkipped.toLocaleString()} dedup-skipped`
-        : '';
     console.log(
-      `  Done: ${fileImported.toLocaleString()} records from ${category}${skipNote}`
+      `  Done: ${fileImported.toLocaleString()} records from ${category}`
     );
   }
 
