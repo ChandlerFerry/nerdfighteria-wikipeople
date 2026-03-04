@@ -61,6 +61,8 @@ CREATE TRIGGER IF NOT EXISTS entities_ai AFTER INSERT ON entities BEGIN
 END;
 
 CREATE INDEX IF NOT EXISTS idx_entities_rand ON entities(category, rand);
+CREATE INDEX IF NOT EXISTS idx_entities_category_pageviews ON entities(category, pageviews);
+CREATE INDEX IF NOT EXISTS idx_entities_category_sitelinks ON entities(category, sitelink_count);
 `;
 
 const SOURCE_DB_PATH = process.env.DB_PATH ?? 'data/people.db';

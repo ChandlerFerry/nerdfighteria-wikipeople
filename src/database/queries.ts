@@ -61,10 +61,6 @@ export interface RandomFilters {
  * Adapted from https://jan.kneschke.de/projects/mysql/order-by-rand/
  */
 export function getRandom(category: Category, n: number, filters?: RandomFilters): EntityRow[] {
-  const step = 1 / n;
-  const offset = Math.random() * step;
-  const results: EntityRow[] = [];
-
   const extraBinds: number[] = [];
   const extraConditions: string[] = [];
 
@@ -81,22 +77,28 @@ export function getRandom(category: Category, n: number, filters?: RandomFilters
     }
   }
 
-  const stmt = extraConditions.length === 0
-    ? preparedQueries.randomSingle
-    : database.prepare(`
+  if (extraConditions.length > 0) {
+    return database
+      .prepare(`
         SELECT qid, label, description, type, category, sitelink_count, pageviews, wikipedia, wikidata
         FROM entities
-        WHERE category = ? AND rand >= ? AND ${extraConditions.join(' AND ')}
-        ORDER BY rand
-        LIMIT 1
-      `);
-  const makeArgs = (pivot: number) => [category, pivot, ...extraBinds];
+        WHERE category = ? AND ${extraConditions.join(' AND ')}
+        ORDER BY RANDOM()
+        LIMIT ?
+      `)
+      .all(category, ...extraBinds, n)
+      .map((row) => toEntityRow(row));
+  }
+
+  const step = 1 / n;
+  const offset = Math.random() * step;
+  const results: EntityRow[] = [];
 
   for (let index = 0; index < n; index++) {
     const pivot = offset + index * step;
     const row =
-      stmt.get(...makeArgs(pivot)) ??
-      stmt.get(...makeArgs(0));
+      preparedQueries.randomSingle.get(category, pivot) ??
+      preparedQueries.randomSingle.get(category, 0);
     if (!row) break;
     results.push(toEntityRow(row as Record<string, SQLOutputValue>));
   }
@@ -180,7 +182,7 @@ export function search(
     return { results, total: (countRow?.total as number) ?? 0, limit, offset };
   } catch (error) {
     console.error('search query failed:', ftsQuery, error);
-    return undefined;
+    return { results: [], total: 0, limit: parameters.limit, offset: parameters.offset };
   }
 }
 
