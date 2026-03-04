@@ -1,3 +1,4 @@
+import { copyFileSync, existsSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
 
 export const CATEGORIES = ['humans', 'fictional', 'apocryphal'] as const;
@@ -62,11 +63,22 @@ END;
 CREATE INDEX IF NOT EXISTS idx_entities_rand ON entities(category, rand);
 `;
 
-export const DB_PATH = process.env.DB_PATH ?? 'data/people.db';
+const SOURCE_DB_PATH = process.env.DB_PATH ?? 'data/people.db';
+const LOCAL_DB_PATH = '/tmp/people.db';
 
-export const database = new DatabaseSync(DB_PATH);
+function resolveDbPath(): string {
+  if (SOURCE_DB_PATH.startsWith('/data/') && !existsSync(LOCAL_DB_PATH)) {
+    console.log(`Copying database from ${SOURCE_DB_PATH} to ${LOCAL_DB_PATH}...`);
+    copyFileSync(SOURCE_DB_PATH, LOCAL_DB_PATH);
+    console.log('Database copied to local disk.');
+  }
+  return existsSync(LOCAL_DB_PATH) ? LOCAL_DB_PATH : SOURCE_DB_PATH;
+}
+
+export const DB_PATH = resolveDbPath();
+
+export const database = new DatabaseSync(DB_PATH, { readOnly: true });
 database.exec(`
-  PRAGMA journal_mode=WAL;
   PRAGMA cache_size=-131072;
   PRAGMA temp_store=MEMORY;
 `);
