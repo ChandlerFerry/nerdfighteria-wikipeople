@@ -1,7 +1,4 @@
-// API configuration - update API_URL for production deployment
 const CONFIG = {
-  // Local development:
-  API_URL: "http://localhost:8080",
-  // Cloud Run example:
-  // API_URL: "https://your-service-abc123.run.app",
+  // API_URL: "http://localhost:8080",
+  API_URL: "https://nerdfighteria-wikipeople-795415723893.us-central1.run.app",
 };
