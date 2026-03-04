@@ -229,28 +229,54 @@ main {
 .random-controls {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.75rem;
 }
 
-.range-sep {
-  color: #666680;
-  font-size: 0.85rem;
+.range-label {
+  font-size: 0.78rem;
+  color: #8888aa;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 600;
 }
 
-.random-controls input[type="number"] {
-  width: 8rem;
-  padding: 0.45rem 0.75rem;
-  font-size: 0.85rem;
+.range-inputs {
+  display: flex;
+  align-items: center;
+  background: #12122a;
   border: 2px solid #2a2a4e;
   border-radius: 8px;
-  background: #12122a;
-  color: #e0e0e8;
-  outline: none;
+  overflow: hidden;
   transition: border-color 0.2s;
 }
 
-.random-controls input[type="number"]::placeholder { color: #666680; }
-.random-controls input[type="number"]:focus { border-color: #6a6af0; }
+.range-inputs:focus-within { border-color: #6a6af0; }
+
+.range-inputs input[type="number"] {
+  width: 5.5rem;
+  padding: 0.4rem 0.6rem;
+  font-size: 0.82rem;
+  background: transparent;
+  color: #e0e0e8;
+  border: none;
+  outline: none;
+  text-align: center;
+  -moz-appearance: textfield;
+}
+
+.range-inputs input[type="number"]::-webkit-inner-spin-button,
+.range-inputs input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.range-inputs input[type="number"]::placeholder { color: #555570; }
+
+.range-sep {
+  color: #555570;
+  font-size: 0.8rem;
+  user-select: none;
+}
 
 .shuffle-btn {
   padding: 0.45rem 1.1rem;

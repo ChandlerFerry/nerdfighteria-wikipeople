@@ -50,9 +50,12 @@
       <div class="random-header">
         <h2>Random people</h2>
         <div class="random-controls">
-          <input type="number" id="min-pageviews" placeholder="Min views" min="0" step="1000">
-          <span class="range-sep">&ndash;</span>
-          <input type="number" id="max-pageviews" placeholder="Max views" min="0" step="1000">
+          <label class="range-label">Pageviews</label>
+          <div class="range-inputs">
+            <input type="number" id="min-pageviews" placeholder="Min" min="0" step="1000">
+            <span class="range-sep">&ndash;</span>
+            <input type="number" id="max-pageviews" placeholder="Max" min="0" step="1000">
+          </div>
           <button id="shuffle-btn" class="shuffle-btn">Shuffle</button>
         </div>
       </div>
