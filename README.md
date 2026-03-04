@@ -1,6 +1,6 @@
 # Nerdfighteria-WikiPeople
 
-**[Try the example app](https://chandlerferry.github.io/nerdfighteria-wikipeople)** | **[Public API docs](https://nerdfighteria-wikipeople-795415723893.us-central1.run.app/documentation)**
+**[Example app](https://chandlerferry.github.io/nerdfighteria-wikipeople)** | **[Public API](https://nerdfighteria-wikipeople-795415723893.us-central1.run.app/documentation)**
 
 Inspired by [Can We Do a Science Together??](https://www.youtube.com/watch?v=6I9eWxP-hQE), this project builds a dataset of ~11.7 million people extracted from [Wikidata](https://www.wikidata.org/).
 
