@@ -1,11 +1,11 @@
 # Nerdfighteria-WikiPeople
 
-This project builds a dataset of ~11.7 million entities extracted from [Wikidata](https://www.wikidata.org/).
+This project builds a dataset of ~11.7 million people extracted from [Wikidata](https://www.wikidata.org/).
 Each entity is enriched with English Wikipedia pageview counts and classified into popularity tiers based on aggregate traffic.
 
 ### Inspiration
 
-This project was inspired by the vlogbrothers ["Can We Do a Science Together??"](https://www.youtube.com/watch?v=6I9eWxP-hQE), which poses the question of how many well-known people an individual can recall.
+This project was inspired by the vlogbrothers ["Can We Do a Science Together??"](https://www.youtube.com/watch?v=6I9eWxP-hQE), which poses the question of how many people an individual can recall.
 
 ## Entity Categories
 
@@ -14,7 +14,7 @@ Entities are classified using Wikidata's [instance of (P31)](https://www.wikidat
 | Category | Description | Entity Count |
 |----------|-------------|-------------:|
 | Humans | Real people ([Q5](https://www.wikidata.org/wiki/Q5)) | 11,593,234 |
-| Fictional | Characters from literature, film, mythology, etc. | ~91,689 |
+| Fictional | Characters from literature, film, mythology, etc. | 91,282 |
 | Apocryphal | Historically disputed figures ([Q21070568](https://www.wikidata.org/wiki/Q21070568)) | 864 |
 
 ### Fictional Character Subtypes
@@ -47,18 +47,11 @@ The fictional category aggregates entities across 22 Wikidata types:
 | [Q63975020](https://www.wikidata.org/wiki/Q63975020) | Musical theatre character | 90 |
 | [Q108065012](https://www.wikidata.org/wiki/Q108065012) | Radio character | 20 |
 
-## WIP - Popularity Tiers
-
-Entities are ranked into four tiers based on cumulative English Wikipedia pageview counts:
-
-- **Very Famous**
-- **Kind of Famous**
-- **Notable**
-- **Barely Notable**
-
 ## Data Pipeline
 
 Reproducing the dataset requires running three sequential stages. Each stage is long-running due to the size of the source data.
+
+Otherwise, [download people.db from MEGA](https://mega.nz/file/c8g0TZzD#lxgL7y29XxPBpSMS86XDMjosTAsXyQqJbSq25B_y6nA) and place it at `data/people.db`
 
 ### Stage 1: Extract Entities from Wikidata (~1 day?)
 
