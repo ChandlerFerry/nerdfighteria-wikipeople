@@ -1,4 +1,4 @@
-# Nerdfighteria-WikiPeople [vlogbrothers - Can We Do a Science Together??](https://www.youtube.com/watch?v=6I9eWxP-hQE)
+# Nerdfighteria-WikiPeople [Can We Do a Science Together??](https://www.youtube.com/watch?v=6I9eWxP-hQE)
 
 This project builds a dataset of ~11.7 million people extracted from [Wikidata](https://www.wikidata.org/).
 Each entity is enriched with English Wikipedia pageview counts and sitelinks.
