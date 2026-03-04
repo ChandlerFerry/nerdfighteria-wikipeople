@@ -226,6 +226,32 @@ main {
 
 .random-header h2 { font-size: 1.1rem; color: #aaaacc; font-weight: 600; }
 
+.random-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.range-sep {
+  color: #666680;
+  font-size: 0.85rem;
+}
+
+.random-controls input[type="number"] {
+  width: 8rem;
+  padding: 0.45rem 0.75rem;
+  font-size: 0.85rem;
+  border: 2px solid #2a2a4e;
+  border-radius: 8px;
+  background: #12122a;
+  color: #e0e0e8;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.random-controls input[type="number"]::placeholder { color: #666680; }
+.random-controls input[type="number"]:focus { border-color: #6a6af0; }
+
 .shuffle-btn {
   padding: 0.45rem 1.1rem;
   font-size: 0.85rem;

@@ -49,7 +49,12 @@
     <section class="random-section">
       <div class="random-header">
         <h2>Random people</h2>
-        <button id="shuffle-btn" class="shuffle-btn">Shuffle</button>
+        <div class="random-controls">
+          <input type="number" id="min-pageviews" placeholder="Min views" min="0" step="1000">
+          <span class="range-sep">&ndash;</span>
+          <input type="number" id="max-pageviews" placeholder="Max views" min="0" step="1000">
+          <button id="shuffle-btn" class="shuffle-btn">Shuffle</button>
+        </div>
       </div>
       <div id="random-grid" class="random-grid"></div>
     </section>

@@ -195,11 +195,17 @@ nextBtn.addEventListener("click", () => {
 
 const randomGrid = document.getElementById("random-grid");
 const shuffleBtn = document.getElementById("shuffle-btn");
+const minPageviewsInput = document.getElementById("min-pageviews");
+const maxPageviewsInput = document.getElementById("max-pageviews");
 
 async function loadRandom() {
   randomGrid.innerHTML = `<div class="status" style="grid-column:1/-1">Loading…</div>`;
   try {
-    const data = await api("/random", { n: 8 });
+    const data = await api("/random", {
+      n: 8,
+      min_pageviews: minPageviewsInput.value,
+      max_pageviews: maxPageviewsInput.value,
+    });
     const CATEGORY_LABELS = {
       humans: "humans",
       fictional: "fictional",

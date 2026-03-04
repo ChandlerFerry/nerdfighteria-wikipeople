@@ -27,7 +27,7 @@ function toEntityRow(row: Record<string, SQLOutputValue>): EntityRow {
   };
 }
 
-const stmts = {
+const preparedQueries = {
   randomSingle: database.prepare(`
     SELECT qid, label, description, type, category, sitelink_count, pageviews, wikipedia, wikidata
     FROM entities
@@ -50,19 +50,53 @@ const stmts = {
   `),
 };
 
+export interface RandomFilters {
+  min_sitelinks?: number;
+  max_sitelinks?: number;
+  min_pageviews?: number;
+  max_pageviews?: number;
+}
+
 /**
  * Adapted from https://jan.kneschke.de/projects/mysql/order-by-rand/
  */
-export function getRandom(category: Category, n: number): EntityRow[] {
+export function getRandom(category: Category, n: number, filters?: RandomFilters): EntityRow[] {
   const step = 1 / n;
   const offset = Math.random() * step;
   const results: EntityRow[] = [];
 
+  const extraBinds: number[] = [];
+  const extraConditions: string[] = [];
+
+  const filterMap: [string, number | undefined][] = [
+    ['sitelink_count >= ?', filters?.min_sitelinks],
+    ['sitelink_count <= ?', filters?.max_sitelinks],
+    ['pageviews >= ?', filters?.min_pageviews],
+    ['pageviews <= ?', filters?.max_pageviews],
+  ];
+  for (const [condition, value] of filterMap) {
+    if (value !== undefined) {
+      extraConditions.push(condition);
+      extraBinds.push(value);
+    }
+  }
+
+  const stmt = extraConditions.length === 0
+    ? preparedQueries.randomSingle
+    : database.prepare(`
+        SELECT qid, label, description, type, category, sitelink_count, pageviews, wikipedia, wikidata
+        FROM entities
+        WHERE category = ? AND rand >= ? AND ${extraConditions.join(' AND ')}
+        ORDER BY rand
+        LIMIT 1
+      `);
+  const makeArgs = (pivot: number) => [category, pivot, ...extraBinds];
+
   for (let index = 0; index < n; index++) {
     const pivot = offset + index * step;
     const row =
-      stmts.randomSingle.get(category, pivot) ??
-      stmts.randomSingle.get(category, 0);
+      stmt.get(...makeArgs(pivot)) ??
+      stmt.get(...makeArgs(0));
     if (!row) break;
     results.push(toEntityRow(row as Record<string, SQLOutputValue>));
   }
@@ -79,7 +113,7 @@ export function autocomplete(q: string, limit: number): EntityRow[] {
   const ftsQuery = buildFtsQuery(q);
   if (!ftsQuery) return [];
   try {
-    return stmts.autocomplete
+    return preparedQueries.autocomplete
       .all(ftsQuery, limit)
       .map((row) => toEntityRow(row));
   } catch (error) {
@@ -151,7 +185,7 @@ export function search(
 }
 
 export function getCategoryCounts(): Record<string, number> {
-  const rows = stmts.categoryCounts.all();
+  const rows = preparedQueries.categoryCounts.all();
   const counts: Record<string, number> = {};
   for (const row of rows) {
     counts[row.category as string] = row.count as number;
