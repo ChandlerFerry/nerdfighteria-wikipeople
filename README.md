@@ -49,3 +49,6 @@ The server listens on port 8080. Rate limiting (100 requests/minute per IP) appl
   - **Franchise-specific types.** e.g. [Pikachu (Q9351)](https://www.wikidata.org/wiki/Q9351) has `P31 =` [Q25930719](https://www.wikidata.org/wiki/Q25930719) (deep in subclass hierarchy).
   - **Profession-based subtypes.** e.g. [fictional detective (Q3656924)](https://www.wikidata.org/wiki/Q3656924) are only captured if also tagged with a generic fictional type.
   - **Mythology.** [Greek (Q22988604)](https://www.wikidata.org/wiki/Q22988604) is allowlisted, but other mythologies may be missed.
+
+## TODO
+- Generate an SDK from the swagger docs when I have time, use @hey-api/openapi-ts
