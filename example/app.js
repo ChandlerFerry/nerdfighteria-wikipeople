@@ -154,7 +154,8 @@ let currentSearch = { q: "", category: "", limit: 20, offset: 0 };
 searchBtn.addEventListener("click", () => doSearch());
 
 async function doSearch(offset = 0) {
-  const q = searchInput.value.trim();
+  searchInput.value = searchInput.value.trim();
+  const q = searchInput.value;
   if (q.length < 2) return;
 
   currentSearch = { q, category: categorySelect.value, limit: 20, offset };
