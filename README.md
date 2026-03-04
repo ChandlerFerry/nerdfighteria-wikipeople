@@ -17,42 +17,11 @@ Entities are classified using Wikidata's [instance of (P31)](https://www.wikidat
 | Fictional | Characters from literature, film, mythology, etc. [(full breakdown)](docs/fictional-characters.md)  | 91,282 |
 | [Apocryphal](https://www.wikidata.org/wiki/Q21070568) | Historically disputed figures | 864 |
 
-## Data Pipeline
+## Getting the Database
 
-Reproducing the dataset requires running three sequential stages. Each stage is long-running due to the size of the source data.
+[Download people.db from MEGA](https://mega.nz/file/c8g0TZzD#lxgL7y29XxPBpSMS86XDMjosTAsXyQqJbSq25B_y6nA) and place it at `data/people.db` (~2.8 GB Download).
 
-Otherwise, [download people.db from MEGA](https://mega.nz/file/c8g0TZzD#lxgL7y29XxPBpSMS86XDMjosTAsXyQqJbSq25B_y6nA) and place it at `data/people.db`
-
-### Stage 1: Extract Entities from Wikidata (~1 day?)
-
-1. Download the complete Wikidata JSON dump (~100 GB compressed):
-   https://dumps.wikimedia.org/wikidatawiki/entities/latest-all.json.gz
-2. Place `latest-all.json.gz` in the repository root.
-3. Run the extraction script:
-   ```bash
-   pnpm script:extract-wikidata
-   ```
-   This produces `data/humans.ndjson`, `data/fictional.ndjson`, and `data/apocryphal.ndjson`.
-
-   The demo is usable at this point, but it will not contain pageview data.
-
-### Stage 2: Extract Pageview Data (~5 days?)
-
-Pageview counts are sourced from Wikipedia's [monthly complete pageview dumps](https://dumps.wikimedia.org/other/pageview_complete/monthly/) (`pageviews-YYYYMM-user.bz2`, ~5.5 GB each).
-
-```bash
-pnpm script:extract-pageviews
-```
-
-This downloads all monthly dump files, processes them, and writes `data/pageviews.ndjson`. Expect this stage to take approximately 30 hours depending on network and disk speed.
-
-### Stage 3: Build the Database
-
-```bash
-pnpm script:build-database
-```
-
-This reads all NDJSON files and produces the SQLite database at `data/people.db`.
+To rebuild from scratch using Wikidata dumps, see [docs/data-pipeline.md](docs/data-pipeline.md) (~1000 GB Download).
 
 ## API
 
