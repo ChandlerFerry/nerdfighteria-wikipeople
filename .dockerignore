@@ -1,6 +1,5 @@
 node_modules
 dist
-src
 data/*.ndjson
 data/*.gz
 *.gz
@@ -8,5 +7,4 @@ data/*.gz
 .gitignore
 .eslintrc*
 eslint.config*
-tsconfig.json
 *.md
