@@ -1,7 +1,7 @@
 # Nerdfighteria-WikiPeople
 
 This project builds a dataset of ~11.7 million people extracted from [Wikidata](https://www.wikidata.org/).
-Each entity is enriched with English Wikipedia pageview counts and classified into popularity tiers based on aggregate traffic.
+Each entity is enriched with English Wikipedia pageview counts and sitelinks.
 
 ### Inspiration
 
