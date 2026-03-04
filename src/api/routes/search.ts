@@ -15,12 +15,34 @@ const searchRoute: FastifyPluginAsyncZod = async (fastify) => {
           category: z.enum(['humans', 'fictional', 'apocryphal']).optional(),
           limit: z.coerce.number().int().min(1).max(100).default(20),
           offset: z.coerce.number().int().min(0).default(0),
+          min_sitelinks: z.coerce.number().int().min(0).optional(),
+          max_sitelinks: z.coerce.number().int().min(0).optional(),
+          min_pageviews: z.coerce.number().int().min(0).optional(),
+          max_pageviews: z.coerce.number().int().min(0).optional(),
         }),
       },
     },
     async (request, reply) => {
-      const { q, category, limit, offset } = request.query;
-      const result = fastify.repo.search({ q, category, limit, offset });
+      const {
+        q,
+        category,
+        limit,
+        offset,
+        min_sitelinks,
+        max_sitelinks,
+        min_pageviews,
+        max_pageviews,
+      } = request.query;
+      const result = fastify.repo.search({
+        q,
+        category,
+        limit,
+        offset,
+        min_sitelinks,
+        max_sitelinks,
+        min_pageviews,
+        max_pageviews,
+      });
       if (!result) {
         return reply
           .status(400)

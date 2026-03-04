@@ -20,6 +20,10 @@ export interface SearchParameters {
   category?: Category;
   limit: number;
   offset: number;
+  min_sitelinks?: number;
+  max_sitelinks?: number;
+  min_pageviews?: number;
+  max_pageviews?: number;
 }
 
 export interface SearchResponse {

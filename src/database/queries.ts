@@ -43,34 +43,6 @@ const stmts = {
     ORDER BY e.sitelink_count DESC
     LIMIT ?
   `),
-  search: database.prepare(`
-    SELECT e.qid, e.label, e.description, e.type, e.category, e.sitelink_count, e.pageviews, e.wikipedia, e.wikidata
-    FROM entities_fts
-    JOIN entities e ON entities_fts.rowid = e.rowid
-    WHERE entities_fts MATCH ?
-    ORDER BY e.sitelink_count DESC
-    LIMIT ? OFFSET ?
-  `),
-  searchWithCategory: database.prepare(`
-    SELECT e.qid, e.label, e.description, e.type, e.category, e.sitelink_count, e.pageviews, e.wikipedia, e.wikidata
-    FROM entities_fts
-    JOIN entities e ON entities_fts.rowid = e.rowid
-    WHERE entities_fts MATCH ? AND e.category = ?
-    ORDER BY e.sitelink_count DESC
-    LIMIT ? OFFSET ?
-  `),
-  searchCount: database.prepare(`
-    SELECT COUNT(*) AS total
-    FROM entities_fts
-    JOIN entities e ON entities_fts.rowid = e.rowid
-    WHERE entities_fts MATCH ?
-  `),
-  searchCountWithCategory: database.prepare(`
-    SELECT COUNT(*) AS total
-    FROM entities_fts
-    JOIN entities e ON entities_fts.rowid = e.rowid
-    WHERE entities_fts MATCH ? AND e.category = ?
-  `),
   categoryCounts: database.prepare(`
     SELECT category, COUNT(*) AS count
     FROM entities
@@ -123,19 +95,53 @@ export function search(
   if (!ftsQuery) return undefined;
 
   try {
-    const { limit, offset, category } = parameters;
+    const {
+      limit,
+      offset,
+      category,
+      min_sitelinks,
+      max_sitelinks,
+      min_pageviews,
+      max_pageviews,
+    } = parameters;
 
-    const results = category
-      ? stmts.searchWithCategory
-          .all(ftsQuery, category, limit, offset)
-          .map((row) => toEntityRow(row))
-      : stmts.search
-          .all(ftsQuery, limit, offset)
-          .map((row) => toEntityRow(row));
+    const conditions = ['entities_fts MATCH ?'];
+    const bindValues: (string | number)[] = [ftsQuery];
 
-    const countRow = category
-      ? stmts.searchCountWithCategory.get(ftsQuery, category)
-      : stmts.searchCount.get(ftsQuery);
+    if (category) {
+      conditions.push('e.category = ?');
+      bindValues.push(category);
+    }
+    if (min_sitelinks !== undefined) {
+      conditions.push('e.sitelink_count >= ?');
+      bindValues.push(min_sitelinks);
+    }
+    if (max_sitelinks !== undefined) {
+      conditions.push('e.sitelink_count <= ?');
+      bindValues.push(max_sitelinks);
+    }
+    if (min_pageviews !== undefined) {
+      conditions.push('e.pageviews >= ?');
+      bindValues.push(min_pageviews);
+    }
+    if (max_pageviews !== undefined) {
+      conditions.push('e.pageviews <= ?');
+      bindValues.push(max_pageviews);
+    }
+
+    const where = conditions.join(' AND ');
+    const base = `FROM entities_fts JOIN entities e ON entities_fts.rowid = e.rowid WHERE ${where}`;
+
+    const results = database
+      .prepare(
+        `SELECT e.qid, e.label, e.description, e.type, e.category, e.sitelink_count, e.pageviews, e.wikipedia, e.wikidata ${base} ORDER BY e.sitelink_count DESC LIMIT ? OFFSET ?`,
+      )
+      .all(...bindValues, limit, offset)
+      .map((row) => toEntityRow(row));
+
+    const countRow = database
+      .prepare(`SELECT COUNT(*) AS total ${base}`)
+      .get(...bindValues);
 
     return { results, total: (countRow?.total as number) ?? 0, limit, offset };
   } catch (error) {
