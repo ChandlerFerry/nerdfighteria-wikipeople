@@ -106,7 +106,7 @@ The server listens on port 8080. Rate limiting (100 requests/minute per IP) appl
 | `GET /health` | Health check (no rate limit) |
 | `GET /random?n=50` | Random sample of N entities per category |
 | `GET /autocomplete?q=einst&limit=10` | FTS5 prefix-based autocomplete |
-| `GET /search?q=einstein&category=humans&limit=20&offset=0` | Full-text search with BM25 ranking and pagination |
+| `GET /search?q=einstein&category=humans&limit=20&offset=0` | Full-text search with BM25 ranking and pagination. Optional filters: `min_sitelinks`, `max_sitelinks`, `min_pageviews`, `max_pageviews` |
 
 ## Known Limitations
 
